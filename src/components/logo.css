@@ -1,0 +1,21 @@
+.site-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #000;
+  gap: 0.5rem;
+}
+
+.site-logo__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.site-logo__text {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  line-height: 1;
+} 
