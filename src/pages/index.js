@@ -27,7 +27,7 @@ const IndexPage = () => {
               </div>
               <div className="article-item-content">
                 <ul className="article-item-list" style={{ listStyle: "none", paddingLeft: 0 }}>
-                  <li>[May. 2025] Mario Aguilera was kind to write a hort write-up about the recent paper for <a href="https://today.ucsd.edu/story/neuroscientists-pinpoint-where-and-how-brain-circuits-are-reshaped-as-we-learn-new-movements">UCSD Today</a></li>
+                  <li>[May. 2025] Mario Aguilera was kind to write a short write-up about the recent paper for <a href="https://today.ucsd.edu/story/neuroscientists-pinpoint-where-and-how-brain-circuits-are-reshaped-as-we-learn-new-movements">UCSD Today</a></li>
                   <li>[May. 2025] Paper in collaboration with the phenomenal Assaf Ramot has published in <a href="https://www.nature.com/articles/s41586-025-08962-8">Nature</a>.</li>
                   <li>[Jul. 2024] Published review on mixed selectivity in <a href="https://www.cell.com/neuron/fulltext/S0896-6273(24)00278-2">Neuron</a> with <a href="https://zuckermaninstitute.columbia.edu/stefano-fusi-phd">Stefano Fusi</a>.</li>
                   <li>[Mar. 2024] Paper with <a href="https://reeshapatellab.org/">Reesha Patel</a> uploaded to bioRxiv.</li>
