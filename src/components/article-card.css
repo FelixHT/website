@@ -26,6 +26,8 @@
 .article-card-header {
   padding: 4rem 1.5rem 1.5rem 1.5rem;
   border-bottom: 1px solid #000;
+  /* Default background color, will be overridden by inline style if provided */
+  background-color: #f1e5e2;
 }
 
 .article-card-title {
@@ -34,11 +36,13 @@
   line-height: 1.2;
   margin-bottom: 0.5rem;
   font-weight: 700;
+  /* Default color, will be overridden by inline style if provided */
   color: #000;
 }
 
 .article-card-author {
   font-size: 0.85rem;
+  /* Default color, will be overridden by inline style if provided */
   color: #666;
   margin-bottom: 0;
   font-family: var(--font-sans);
@@ -107,4 +111,4 @@
   .article-card-description {
     font-size: 0.9rem;
   }
-} 
+}

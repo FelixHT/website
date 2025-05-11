@@ -30,7 +30,7 @@ const Header = ({ siteTitle }) => (
       <div className="site-header__issue-bar-inner">
         <span>University of California San Diego</span>
         <span className="site-header__issue-bar-separator">|</span>
-        <span>updated April 2025</span>
+        <span>updated May 2025</span>
         {/* <div className="site-header__issue-bar-links"> */}
           {/* <Link to="/archive" className="site-header__issue-bar-link">Archive</Link>
           <Link to="/notes" className="site-header__issue-bar-link">Notes</Link>
