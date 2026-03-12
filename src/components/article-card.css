@@ -1,6 +1,7 @@
 .article-card-container {
   border: 1px solid #000;
-  background-color: #fff3f0;
+  border-top: 3px solid #C4963F;
+  background-color: #faf7f2;
   padding: 0;
   margin-bottom: 1.5rem;
   display: flex;
@@ -8,6 +9,12 @@
   height: calc(100% - 1.5rem);
   position: relative;
   box-shadow: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.article-card-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .article-card-container:last-child {
@@ -24,10 +31,9 @@
 }
 
 .article-card-header {
-  padding: 4rem 1.5rem 1.5rem 1.5rem;
+  padding: 1.5rem;
   border-bottom: 1px solid #000;
-  /* Default background color, will be overridden by inline style if provided */
-  background-color: #f1e5e2;
+  background-color: rgba(244, 208, 111, 0.2);
 }
 
 .article-card-title {
@@ -41,12 +47,13 @@
 }
 
 .article-card-author {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   /* Default color, will be overridden by inline style if provided */
   color: #666;
   margin-bottom: 0;
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 .article-card-content {
@@ -68,39 +75,41 @@
 
 .article-card-footer {
   display: flex;
+  align-items: center;
   border-top: 1px solid #000;
   margin-top: auto;
 }
 
 .article-card-tag {
-  font-family: var(--font-sans);
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
   color: #777;
   background-color: transparent;
   padding: 0.75rem 1.5rem;
   border: none;
   display: inline-block;
   border-right: 1px solid #000;
-}
-
-.article-card-tag:last-child {
-  border-right: none;
+  letter-spacing: 0.02em;
 }
 
 .article-card-readmore-link {
   text-decoration: none;
   display: block;
-  margin-top: 2rem;
-  align-self: flex-end;
+  margin-left: auto;
+  padding: 0.75rem 1.5rem;
 }
 
 .article-card-readmore {
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #000;
   font-weight: 500;
-  text-align: right;
   display: block;
+  transition: transform 0.15s ease;
+}
+
+.article-card-readmore-link:hover .article-card-readmore {
+  transform: translateX(3px);
 }
 
 @media (max-width: 768px) {

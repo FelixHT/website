@@ -1,0 +1,108 @@
+/* Blog Hero Card — WIP-inspired full-width image with overlaid text panel */
+
+.blog-hero-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.blog-hero-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.blog-hero-card__image {
+  width: 100%;
+  display: block;
+  background-color: transparent;
+  padding: 1.5rem 2rem 0.5rem;
+}
+
+.blog-hero-card__image svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.blog-hero-card__overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 55%;
+  min-width: 340px;
+  background-color: rgba(27, 42, 74, 0.95);
+  color: #fff;
+  padding: 2rem 2.5rem;
+}
+
+.blog-hero-card__title {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.blog-hero-card__author {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 0;
+}
+
+.blog-hero-card__author strong {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.blog-hero-card__divider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin: 1rem 0;
+}
+
+.blog-hero-card__excerpt {
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 0;
+}
+
+.blog-hero-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.blog-hero-card__tag {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+  .blog-hero-card__overlay {
+    position: relative;
+    width: 100%;
+    min-width: unset;
+    padding: 1.5rem;
+  }
+
+  .blog-hero-card__title {
+    font-size: 1.35rem;
+  }
+
+  .blog-hero-card__image {
+    min-height: 180px;
+  }
+}

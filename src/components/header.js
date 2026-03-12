@@ -1,6 +1,5 @@
 import * as React from "react"
 import { Link } from "gatsby"
-import { StaticImage } from "gatsby-plugin-image"
 import "./header.css"
 
 const Header = ({ siteTitle }) => (
@@ -29,8 +28,8 @@ const Header = ({ siteTitle }) => (
     <div className="site-header__issue-bar">
       <div className="site-header__issue-bar-inner">
         <span>University of California San Diego</span>
-        <span className="site-header__issue-bar-separator">|</span>
-        <span>updated May 2025</span>
+        <span className="site-header__issue-bar-separator">·</span>
+        <span>updated March 2026</span>
         {/* <div className="site-header__issue-bar-links"> */}
           {/* <Link to="/archive" className="site-header__issue-bar-link">Archive</Link>
           <Link to="/notes" className="site-header__issue-bar-link">Notes</Link>

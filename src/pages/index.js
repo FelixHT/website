@@ -5,6 +5,7 @@ import Layout from "../components/layout"
 import SpotlightCard from "../components/SpotlightCard"
 import ArticleCard from "../components/ArticleCard"
 import SpotlightCardAlt from "../components/SpotlightCardAlt"
+import BlogHeroCard from "../components/BlogHeroCard"
 import "./index.css"
 
 const IndexPage = () => {
@@ -21,16 +22,17 @@ const IndexPage = () => {
           {/* Articles Column */}
           <div className="articles-column">
             <article className="article-item">
-              <div className="article-item-header" style={{ backgroundColor: "#5E76B4", color: "#000000" }}>
-                <h3 className="article-item-title" style={{ marginBottom: "-1rem", color: "#000000" }}>News</h3>
+              <div className="article-item-header">
+                <h3 className="article-item-title" style={{ marginBottom: "-1rem" }}>News</h3>
                 {/* <p className="article-item-author"></p> */}
               </div>
               <div className="article-item-content">
                 <ul className="article-item-list" style={{ listStyle: "none", paddingLeft: 0 }}>
-                  <li>[May. 2025] Mario Aguilera was kind to write a short write-up about the recent paper for <a href="https://today.ucsd.edu/story/neuroscientists-pinpoint-where-and-how-brain-circuits-are-reshaped-as-we-learn-new-movements">UCSD Today</a></li>
+                  <li>[Aug. 2025] Received the Ray Thomas Edwards Award for Research Excellence from the UCSD Department of Biological Sciences.</li>
+                  <li>[May. 2025] Mario Aguilera was kind to write a short write-up about the recent paper for <a href="https://today.ucsd.edu/story/neuroscientists-pinpoint-where-and-how-brain-circuits-are-reshaped-as-we-learn-new-movements">UCSD Today</a>.</li>
                   <li>[May. 2025] Paper in collaboration with the phenomenal Assaf Ramot has published in <a href="https://www.nature.com/articles/s41586-025-08962-8">Nature</a>.</li>
+                  <li>[2025] Paper with <a href="https://reeshapatellab.org/">Reesha Patel</a> accepted at Nature Neuroscience.</li>
                   <li>[Jul. 2024] Published review on mixed selectivity in <a href="https://www.cell.com/neuron/fulltext/S0896-6273(24)00278-2">Neuron</a> with <a href="https://zuckermaninstitute.columbia.edu/stefano-fusi-phd">Stefano Fusi</a>.</li>
-                  <li>[Mar. 2024] Paper with <a href="https://reeshapatellab.org/">Reesha Patel</a> uploaded to bioRxiv.</li>
                   <li>[Jul. 2023] I advanced to PhD candidacy.</li>
                   <li>[Oct. 2022] Paper with <a href="https://themillslab.com/">Fergil Mills</a> uploaded to bioRxiv.</li>
                 </ul>
@@ -42,34 +44,64 @@ const IndexPage = () => {
             </article>
 
             <article className="article-item">
-              <div className="article-item-header" style={{ backgroundColor: "#8E7FA9", color: "#000000" }}>
-                <h3 className="article-item-title" style={{ marginBottom: "-1rem", color: "#000000" }}>Teaching</h3>
+              <div className="article-item-header">
+                <h3 className="article-item-title" style={{ marginBottom: "-1rem" }}>Teaching</h3>
                 {/* <p className="article-item-author"></p> */}
               </div>
               <div className="article-item-content">
                 <ul className="article-item-list" style={{ listStyle: "none", paddingLeft: 0 }}>
-                  <li>Graduate Instruction Assistant, Python for Biologists at University of California San Diego, Winter 2023</li>
-                  <li>Teaching Assistant, Computational Neuroscience at Neuromatch Academy, Summer 2022</li>
-                  <li>Graduate Instruction Assistant, Bioinformatics Laboratory at University of California San Diego, Spring 2022</li>
-                  <li>Graduate Instruction Assistant, Computational Models of the Brain at University of California San Diego, Spring 2021</li>
-                  <li>Teaching Assistant, Imperative Programming at Maastricht University, Spring 2017</li>
-                  <li>Teaching Assistant, Introduction to Programming at Maastricht University, Fall 2016</li>
+                  <li><strong>Cellular Biology</strong> — UCSD, Fall 2025</li>
+                  <li><strong>Neural Data Science</strong> — UCSD, Winter 2025</li>
+                  <li><strong>Bioinformatics Laboratory</strong> — UCSD, Spring 2023</li>
+                  <li><strong>Python for Biologists</strong> — UCSD, Winter 2023</li>
+                  <li><strong>Computational Neuroscience</strong> — Neuromatch Academy, Summer 2022</li>
+                  <li><strong>Computational Models of the Brain</strong> — UCSD, Spring 2022</li>
+                  <li><strong>Imperative Programming</strong> — Maastricht University, Spring 2017</li>
+                  <li><strong>Introduction to Programming</strong> — Maastricht University, Fall 2016</li>
                 </ul>
               </div>
             </article>
 
             <article className="article-item">
-              <div className="article-item-header" style={{ backgroundColor: "#DBDECE", color: "#000000" }}>
-                <h3 className="article-item-title" style={{ marginBottom: "-1rem", color: "#000000" }}>Conferences</h3>
+              <div className="article-item-header">
+                <h3 className="article-item-title" style={{ marginBottom: "-1rem" }}>Conferences</h3>
                 {/* <p className="article-item-author"></p> */}
               </div>
               <div className="article-item-content">
                 <ul className="article-item-list" style={{ listStyle: "none", paddingLeft: 0 }}>
-                  <li>[CoSyNe 2025] Workshop on Individual Differences</li>
-                  <li>[SfN 2024] Shared Representation Discovery</li>
-                  <li>[FENS 2024] Shared Representation Discovery</li>
+                  <li>[SfN 2025] Identifying motor representations that robustly generalize across subjects and behavioral contexts.</li>
+                  <li>[CoSyNe 2025] Co-organized workshop: "What makes us unique: Deconstructing the sources of individual differences."</li>
+                  <li>[SfN & FENS 2024] Shared Representation Discovery for Multimodal Datasets.</li>
+                  <li>[Salk Retreat 2024] Oral presentation: Unbiased discovery of interpretable shared representations.</li>
+                  <li>[SfN 2023] Acute and chronic social isolation promote diverse behavior repertoires and differentially modify mPFC responses to social contact.</li>
+                  <li>[Salk Retreat 2023] Poster: Unbiased discovery of interpretable shared representations.</li>
                   <li>[SfN 2022] Functional characterization of input-defined neurons within the primary motor cortex during motor learning.</li>
                   <li>[CCN 2019] Abstract representations of space in the mouse dentate gyrus.</li>
+                </ul>
+              </div>
+            </article>
+
+            <article className="article-item">
+              <div className="article-item-header">
+                <h3 className="article-item-title" style={{ marginBottom: "-1rem" }}>Awards</h3>
+              </div>
+              <div className="article-item-content">
+                <ul className="article-item-list" style={{ listStyle: "none", paddingLeft: 0 }}>
+                  <li><strong>Ray Thomas Edwards Award</strong> — UCSD Department of Biological Sciences, 2025</li>
+                  <li><strong>MaCSBio Thesis Award</strong> — Maastricht Centre for Systems Biology, 2019</li>
+                </ul>
+              </div>
+            </article>
+
+            <article className="article-item">
+              <div className="article-item-header">
+                <h3 className="article-item-title" style={{ marginBottom: "-1rem" }}>Mentoring</h3>
+              </div>
+              <div className="article-item-content">
+                <ul className="article-item-list" style={{ listStyle: "none", paddingLeft: 0 }}>
+                  <li><strong>BUMMP</strong> — Undergraduate and Master's mentorship program, UCSD, 2023–present</li>
+                  <li><strong>Heithoff-Brody Summer Scholars</strong> — High school mentor, Salk Institute, 2024</li>
+                  <li><strong>Graduate Research Mentor</strong> — Visiting master student in computational neuroscience, 2022–2023</li>
                 </ul>
               </div>
             </article>
@@ -88,46 +120,62 @@ const IndexPage = () => {
 
           {/* More Articles Column */}
           <div className="articles-column">
-            <ArticleCard 
+            <ArticleCard
               title="Motor learning refines thalamic influence on motor cortex"
               author="Assaf Ramot & Felix Taschbach et al."
-              description="The primary motor cortex (M1) is central for the learning and execution of dexterous motor skills1-3, and its superficial layer (layers 2 and 3; hereafter, L2/3) is a key locus of learning-related plasticity1,4-6. It remains unknown how motor learning shapes the way in which upstream regions activate M1 circuits to execute learned movements. Here, using longitudinal axonal imaging of the main inputs to M1 L2/3 in mice, we show that the motor thalamus is the key input source that encodes learned movements in experts (animals trained for two weeks). We then use optogenetics to identify the subset of M1 L2/3 neurons that are strongly driven by thalamic inputs before and after learning. We find that the thalamic influence on M1 changes with learning, such that the motor thalamus preferentially activates the M1 neurons that encode learned movements in experts. Inactivation of the thalamic inputs to M1 in experts impairs learned movements. Our study shows that motor learning reshapes the thalamic influence on M1 to enable the reliable execution of learned movements. "
+              description="Longitudinal imaging of thalamic axons in M1 shows that motor learning reorganizes which cortical neurons the thalamus drives, shifting its influence toward the neurons that encode learned movements. Inactivating these thalamic inputs in expert mice impairs the learned movements."
               tag="Nature"
+              year="2025"
               link="https://www.nature.com/articles/s41586-025-08962-8"
-              headerBgColor="#5E76B4"
-              headerFontColor="#000000"
             />
-            <ArticleCard 
+            <ArticleCard
               title="Amygdalostriatal transition zone neurons encode sustained valence to direct conditioned behaviors"
               author="Fergil Mills et al."
-              description="Here, we present the amygdalostriatal transition zone (ASt) as a missing piece of a highly conserved process of paramount importance for survival, which represents an internal state (e.g. fear) that can be expressed in multiple motor outputs (e.g. freezing or escape). From in vivo cellular resolution recordings that include both electrophysiology and calcium imaging, we find that ASt neurons are sparse coding, extremely high signal-to-noise, and maintain a sustained response for negative valence stimuli for the duration of the defensive behavior."
+              description="The amygdalostriatal transition zone (ASt) contains sparse, high signal-to-noise neurons that maintain sustained responses to negative valence stimuli throughout defensive behavior. Photostimulation of ASt drives freezing and avoidance; inhibiting its Drd2+ neurons reduces conditioned fear."
               tag="Preprint"
+              year="2022"
               link="https://www.biorxiv.org/content/10.1101/2022.10.28.514263v1"
-              headerBgColor="#8E7FA9"
-              headerFontColor="#000000"
             />
-            
-            <ArticleCard 
+
+            <ArticleCard
               title="Social isolation recruits amygdala-cortical circuitry to escalate alcohol drinking"
               author="Reesha Patel et al."
-              description="How do social factors impact the brain and contribute to increased alcohol drinking? We found that social rank predicts alcohol drinking, where subordinates drink more than dominants. Furthermore, social isolation escalates alcohol drinking, particularly impacting subordinates who display a greater increase in alcohol drinking compared to dominants."
-              tag="Preprint"
+              description="Social rank predicts alcohol consumption in mice, with subordinates drinking more than dominants. Social isolation escalates drinking through a BLA-mPFC circuit that becomes hyperexcitable; optogenetically inhibiting this circuit after isolation reduces alcohol intake."
+              tag="Accepted in principle"
+              year="2023"
               link="https://pmc.ncbi.nlm.nih.gov/articles/PMC10984017/"
-              headerBgColor="#DBDECE"
-              headerFontColor="#000000"
             />
-            
-            <ArticleCard 
+
+            <ArticleCard
+              title="Social exclusion amplifies behavioral responses to physical pain via insular neuromodulation"
+              author="Kay Tye et al."
+              description="Social exclusion increases sensitivity to physical pain. Blocking oxytocin signaling in the insula replicates this effect, suggesting social exclusion alters pain perception through insular neuromodulation."
+              tag="Preprint"
+              year="2025"
+              link="https://doi.org/10.21203/rs.3.rs-6615222/v1"
+            />
+
+            <ArticleCard
               title="Cortical ensembles orchestrate social competition through hypothalamic outputs"
               author="Padilla-Coreano & Batra et al."
-              description="Most social species self-organize into dominance hierarchies, which decreases aggression and conserves energy, but it is not clear how individuals know their social rank. We have only begun to learn how the brain represents social rank, and guides behavior on the basis of this representation. The medial prefrontal cortex (mPFC) is involved in social dominance in rodents, and humans. Yet, precisely how the mPFC encodes relative social rank and which circuits mediate this computation is not known. "
+              description="mPFC population dynamics predict social rank and competitive outcomes in mice. The mPFC exerts top-down control over dominance behavior through projections to the lateral hypothalamus, establishing a cortico-hypothalamic circuit for social competition."
               tag="Nature"
+              year="2022"
               link="https://www.nature.com/articles/s41586-022-04507-5"
-              headerBgColor="#D9B19C"
-              headerFontColor="#000000"
             />
           </div>
         </div>
+
+        {/* Section divider */}
+        <div className="section-divider"></div>
+
+        {/* Blog section */}
+        <BlogHeroCard
+          title="Canonical Correlation Analysis"
+          excerpt="A step-by-step derivation of CCA, from objective to eigenvalue problem, with geometric interpretation and implementation."
+          tag="Tutorial"
+          slug="/blog/cca/"
+        />
       </div>
     </Layout>
   );

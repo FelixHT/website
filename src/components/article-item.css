@@ -1,6 +1,6 @@
 .article-item {
   border: 1px solid #000;
-  background-color: #fff3f0;
+  background-color: #faf7f2;
   padding: 0;
   margin-bottom: 1.5rem;
   display: flex;
@@ -18,7 +18,7 @@
   padding: 2rem 1.5rem 1rem 1.5rem;
   border-bottom: 1px solid #000;
   /* Default background color, will be overridden by inline style */
-  background-color: #f1e5e2;
+  background-color: #f0ede6;
 }
 
 .article-item-title {

@@ -48,10 +48,10 @@ const SpotlightCard = () => {
         <h2 className="spotlight-card__title" style={{ textAlign: "left" }}>Biography</h2>
         <div className="spotlight-card__excerpt" style={{ textAlign: "left" }}>
           <p>
-            I am currently a PhD candidate in the Biological Sciences Program at UCSD, where I am fortunate to work with Prof. Marcus Benna. I received my MSc in Systems Biology at Maastricht University. I completed my master thesis on computational neuroscience working in the lab of Stefano Fusi at Columbia University.
+            I am currently a PhD candidate in the Biological Sciences Program at UCSD, where I work with Prof. Marcus Benna. I received my MSc in Systems Biology at Maastricht University and completed my master thesis on computational neuroscience in the lab of Stefano Fusi at Columbia University.
           </p>
           <p>
-            My research is on how populations of neurons encode information within ethological contexts. Specifically, I am interested in how changes within an animal's internal state lead to changes within its neural representations and how these representations evolve over time. For instance, how chronic mild stress can induce depression.
+            My research focuses on developing computational methods for cross-subject neural data analysis. I am interested in identifying shared neural structure across individuals while preserving meaningful individual variability. To this end, I developed ShaReD (Shared Representation Discovery), a behavior-supervised method for aligning neural population activity across subjects.
           </p>
         </div>
         

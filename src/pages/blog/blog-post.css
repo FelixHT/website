@@ -1,0 +1,759 @@
+/* Blog post — Distill.pub inspired layout
+ *
+ * Grid columns:
+ *   [screen] [page] [body ─── 680px ───] [gap 40px] [gutter 250px] [page] [screen]
+ *
+ * The article element IS the grid container.
+ * Header and footer sit in the body column.
+ * Body wrapper spans body+gap+gutter so float sidenotes work inline.
+ * Figures can break out via width classes (l-body-outset, l-page, l-screen).
+ */
+
+/* ── Grid container ── */
+
+.blog-post {
+  display: grid;
+  grid-template-columns:
+    [screen-start] 1fr
+    [page-start] minmax(24px, 60px)
+    [body-start] minmax(0, 680px)
+    [body-end] 40px
+    [gutter-start] minmax(0, 250px)
+    [gutter-end page-end] minmax(24px, 60px)
+    1fr [screen-end];
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  overflow: visible;
+}
+
+/* Default: all direct children go in body column */
+.blog-post > * {
+  grid-column: body;
+}
+
+/* ── Table of Contents (left margin) ── */
+
+.blog-toc-wrapper {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: calc(100% + 40px);
+  width: 160px;
+}
+
+.blog-toc {
+  position: sticky;
+  top: 2rem;
+}
+
+.blog-toc__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid rgba(0, 0, 0, 0.08);
+}
+
+.blog-toc__item {
+  margin-bottom: 0;
+}
+
+.blog-toc__link {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.35);
+  text-decoration: none;
+  border: none;
+  border-left: 2px solid transparent;
+  margin-left: -2px;
+  padding: 0.35em 0 0.35em 0.85em;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.blog-toc__link:hover {
+  color: rgba(0, 0, 0, 0.55);
+  border-bottom: none;
+}
+
+.blog-toc__link--active {
+  color: #4A7C6F;
+  border-left-color: #4A7C6F;
+}
+
+/* Override global link color inside blog posts */
+.blog-post a {
+  color: rgba(0, 0, 0, 0.65);
+  text-decoration: none;
+  text-decoration-thickness: initial;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  font-weight: 400;
+}
+
+.blog-post a:hover {
+  color: rgba(0, 0, 0, 0.9);
+  border-bottom-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Override global code background inside blog posts */
+.blog-post code,
+.blog-post tt {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.blog-post code:before,
+.blog-post code:after,
+.blog-post tt:before,
+.blog-post tt:after {
+  content: none;
+}
+
+/* ── Title block ── */
+
+.blog-post__header {
+  grid-column: body;
+  margin-top: 4rem;
+}
+
+.blog-post__title {
+  font-family: var(--font-serif);
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  color: rgba(0, 0, 0, 0.9);
+  letter-spacing: -0.01em;
+}
+
+.blog-post__subtitle {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.5);
+  margin-bottom: 1.5rem;
+}
+
+.blog-post__byline {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  margin-bottom: 0;
+}
+
+.blog-post__byline-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.blog-post__byline-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(0, 0, 0, 0.4);
+  margin-bottom: 0.15rem;
+}
+
+.blog-post__byline-value {
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.blog-post__byline-value a {
+  color: rgba(0, 0, 0, 0.7);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.blog-post__byline-value a:hover {
+  color: rgba(0, 0, 0, 0.9);
+  border-bottom-color: rgba(0, 0, 0, 0.5);
+}
+
+/* ── Body ── */
+/* Spans body + gap + gutter so float-based sidenotes work inline */
+
+.blog-post__body {
+  grid-column: body / gutter-end;
+  display: block;
+  overflow: visible;
+  padding: 2.5rem 0 4rem;
+  position: relative;
+}
+
+.blog-post__body > p {
+  max-width: 680px;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  margin-bottom: 1.25rem;
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.blog-post__body > h2 {
+  max-width: 680px;
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  color: rgba(0, 0, 0, 0.9);
+  line-height: 1.25;
+}
+
+.blog-post__body > h3 {
+  max-width: 680px;
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-style: italic;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* ── Math ── */
+
+.math-inline {
+  /* KaTeX handles styling */
+}
+
+.math-block {
+  max-width: 680px;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.equation-row {
+  max-width: 680px;
+  display: flex;
+  align-items: center;
+  margin: 1.5rem 0;
+  gap: 1rem;
+}
+
+.equation-row .math-block {
+  flex: 1;
+  margin: 0;
+}
+
+.equation-number {
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Code blocks ── */
+
+.blog-post__body pre {
+  max-width: 680px;
+  background-color: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 3px;
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.blog-post__body code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background-color: rgba(0, 0, 0, 0.04);
+  padding: 0.1em 0.35em;
+  border-radius: 2px;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.blog-post__body pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: 1em;
+}
+
+/* ── Figures ── */
+
+.blog-figure {
+  margin: 2.5rem 0;
+}
+
+.blog-figure__caption {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: 0.75rem;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+  max-width: 680px;
+}
+
+/* Width classes — used inside .blog-post__body */
+.l-body {
+  max-width: 680px;
+}
+
+.l-body-outset {
+  /* Center on the 680px body text column, not on the body+gutter area.
+     .blog-post__body spans body+gap+gutter (970px). The body column center
+     is at 340px from that container's left edge. We use position+transform
+     so the figure's center aligns with the body column center, and it can
+     extend freely on both left and right. */
+  max-width: 800px;
+  position: relative;
+  left: 340px;
+  transform: translateX(-50%);
+}
+
+/* Width classes — used as direct grid children of .blog-post */
+.blog-post > .l-page {
+  grid-column: page / page-end;
+}
+
+.blog-post > .l-screen {
+  grid-column: screen-start / screen-end;
+}
+
+.blog-post > .l-body-outset {
+  grid-column: body / gutter-end;
+}
+
+/* Legacy figure classes (keep for compatibility) */
+.blog-post__figure {
+  max-width: 680px;
+  margin: 2.5rem 0;
+}
+
+.blog-post__figure img {
+  width: 100%;
+  display: block;
+}
+
+.blog-post__figure figcaption {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: 0.75rem;
+  line-height: 1.5;
+}
+
+/* ── Sidenotes (Tufte float method inside body container) ── */
+
+.sidenote-wrapper {
+  display: inline;
+}
+
+/* Hidden on desktop; visible on mobile as the tap target */
+.sidenote-toggle {
+  display: none;
+}
+
+.sidenote-checkbox {
+  display: none;
+}
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 250px;
+  margin-right: -290px;
+  margin-top: 0.2rem;
+  margin-bottom: 1.5rem;
+  font-family: var(--font-serif);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: rgba(0, 0, 0, 0.5);
+  padding-left: 1rem;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.sidenote a {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.sidenote a:hover {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+/* ── Citations ── */
+
+.citation {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  vertical-align: super;
+  line-height: 0;
+  position: relative;
+  top: -0.1em;
+  white-space: nowrap;
+}
+
+.citation__link {
+  color: rgba(0, 0, 0, 0.45);
+  text-decoration: none;
+  border-bottom: none !important;
+}
+
+.citation__link:hover {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+/* ── Blockquotes ── */
+
+.blog-post__body > blockquote {
+  max-width: 680px;
+  margin: 2rem 0;
+  padding-left: 1.5rem;
+  border-left: 2px solid rgba(0, 0, 0, 0.15);
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* ── References ── */
+
+.blog-references {
+  max-width: 680px;
+  padding-left: 1.5rem;
+  margin: 1.5rem 0 0;
+  font-family: var(--font-serif);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.blog-references li {
+  margin-bottom: 0.75rem;
+}
+
+.blog-references em {
+  font-style: italic;
+}
+
+/* ── Interactive figure shared styles ── */
+
+.blog-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.blog-figure__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.blog-figure__button {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: rgba(0, 0, 0, 0.5);
+  background: none;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  padding: 0.3em 0.8em;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.blog-figure__button:hover {
+  color: rgba(0, 0, 0, 0.8);
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.blog-figure__readout {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+/* ── Footer ── */
+
+.blog-post__footer-sep {
+  grid-column: body / gutter-end;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin-top: 3rem;
+}
+
+.blog-post__back {
+  grid-column: body;
+}
+
+.blog-post__back-link {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 1.5rem;
+  margin-bottom: 4rem;
+  transition: color 0.15s ease;
+}
+
+.blog-post__back-link:hover {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+/* ── Lists ── */
+
+.blog-post__list {
+  max-width: 680px;
+  padding-left: 1.5rem;
+  margin: 1rem 0 1.25rem;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.blog-post__list li {
+  margin-bottom: 0.5rem;
+}
+
+.blog-post__list strong {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* ── Comparison table ── */
+
+.blog-comparison-table-wrapper {
+  max-width: 680px;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+
+.blog-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.blog-comparison-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(0, 0, 0, 0.5);
+  padding: 0.5rem 1rem 0.5rem 0;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.blog-comparison-table td {
+  padding: 0.6rem 1rem 0.6rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  vertical-align: top;
+}
+
+.blog-comparison-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Dimensionality Explorer ── */
+
+.dim-explorer {
+  width: 100%;
+}
+
+.dim-explorer__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.dim-explorer__slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 140px;
+  flex: 1;
+}
+
+.dim-explorer__label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.dim-explorer__label strong {
+  color: rgba(0, 0, 0, 0.75);
+  font-weight: 600;
+}
+
+.dim-explorer__range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.dim-explorer__range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dim-explorer__range::-webkit-slider-thumb:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.dim-explorer__range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  border: none;
+}
+
+.dim-explorer__warning {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #d9534f;
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(217, 83, 79, 0.06);
+  border-left: 2px solid rgba(217, 83, 79, 0.3);
+  border-radius: 2px;
+}
+
+/* ── Permutation Test ── */
+
+.perm-test {
+  width: 100%;
+}
+
+.perm-test__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.perm-test__info {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 1100px) {
+  .blog-post {
+    grid-template-columns:
+      [screen-start page-start] 24px
+      [body-start] 1fr
+      [body-end gutter-start gutter-end page-end] 24px
+      [screen-end];
+  }
+
+  .blog-toc-wrapper {
+    display: none;
+  }
+
+  .sidenote-toggle {
+    display: inline;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    vertical-align: super;
+    color: rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    line-height: 0;
+    position: relative;
+    top: -0.15em;
+    margin-left: 1px;
+    border-bottom: 1px dashed rgba(0, 0, 0, 0.3);
+    padding-bottom: 1px;
+  }
+
+  .sidenote {
+    float: none;
+    display: none;
+    width: 100%;
+    max-width: 680px;
+    margin: 0.5rem 0 1rem;
+    margin-right: 0;
+    padding: 0.75rem 1rem;
+    background-color: rgba(0, 0, 0, 0.025);
+    border-left: 2px solid rgba(0, 0, 0, 0.15);
+    font-size: 0.82rem;
+    color: rgba(0, 0, 0, 0.55);
+  }
+
+  .sidenote-checkbox:checked + .sidenote {
+    display: block;
+  }
+
+  .l-body-outset {
+    max-width: 100%;
+    position: static;
+    left: auto;
+    transform: none;
+  }
+
+  .dim-explorer__controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .perm-test__controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .blog-post__title {
+    font-size: 2rem;
+  }
+
+  .blog-post__subtitle {
+    font-size: 1.05rem;
+  }
+
+  .blog-post__body > p {
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .blog-post__byline {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}

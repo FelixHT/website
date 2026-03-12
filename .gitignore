@@ -3,6 +3,9 @@
 public/
 node_modules/
 
+# Internal design docs
+docs/
+
 # Environment
 .env
 .env.development

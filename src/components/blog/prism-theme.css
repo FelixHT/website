@@ -1,0 +1,65 @@
+/* Minimal Prism theme — warm, academic feel */
+
+code[class*="language-"],
+pre[class*="language-"] {
+  color: rgba(0, 0, 0, 0.8);
+  font-family: var(--font-mono);
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  tab-size: 4;
+  hyphens: none;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: rgba(0, 0, 0, 0.38);
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.token.keyword,
+.token.builtin {
+  color: #7a4e8a;
+  font-weight: 500;
+}
+
+.token.function {
+  color: #3a6e8f;
+}
+
+.token.class-name {
+  color: #3a6e8f;
+}
+
+.token.string,
+.token.triple-quoted-string {
+  color: #6a7e3a;
+}
+
+.token.number {
+  color: #b56434;
+}
+
+.token.boolean {
+  color: #7a4e8a;
+}
+
+.token.operator {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.token.decorator {
+  color: #b56434;
+}
+
+.token.parameter {
+  color: rgba(0, 0, 0, 0.7);
+}

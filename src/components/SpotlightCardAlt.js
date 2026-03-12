@@ -33,7 +33,7 @@ const SpotlightCardAlt = () => {
         <h2 className="spotlight-card__title">Mixed selectivity: Cellular computations for complexity</h2>
         <div className="spotlight-card__excerpt">
           <p>
-          The property of mixed selectivity has been discussed at a computational level and offers a strategy to maximize computational power by adding versatility to the functional role of each neuron. Here, we offer a biologically grounded implementational-level mechanistic explanation for mixed selectivity in neural circuits. 
+          Neurons with nonlinear mixed selectivity create high-dimensional representations that give downstream readouts enormous flexibility. We review the biological mechanisms, including oscillations and neuromodulation, that gate which variables are mixed and transmitted.
           </p>
         </div>
         <div className="spotlight-card__footer">
