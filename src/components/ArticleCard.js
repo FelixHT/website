@@ -10,10 +10,11 @@ const ArticleCard = ({
   year,
   link,
   headerBgColor,
-  headerFontColor
+  headerFontColor,
+  borderColor
 }) => {
   return (
-    <article className="article-card-container">
+    <article className="article-card-container" style={borderColor ? { borderTopColor: borderColor } : undefined}>
       <div className="article-card-content-wrapper">
         <div className="article-card-header" style={{
           backgroundColor: headerBgColor || undefined,

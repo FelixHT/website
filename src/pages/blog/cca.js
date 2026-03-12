@@ -13,8 +13,15 @@ import CodeBlock from "../../components/blog/CodeBlock"
 import TableOfContents from "../../components/blog/TableOfContents"
 import DimensionalityExplorer from "../../components/blog/DimensionalityExplorer"
 import PermutationTest from "../../components/blog/PermutationTest"
+import VariableLegend from "../../components/blog/VariableLegend"
 import "../../components/blog/prism-theme.css"
 import "./blog-post.css"
+
+const CCA_LEGEND_GROUPS = [
+  { color: "#4A90D9", label: "Dataset A", vars: ["X_a", "w_a", "\\Sigma_{aa}"] },
+  { color: "#D4783C", label: "Dataset B", vars: ["X_b", "w_b", "\\Sigma_{bb}"] },
+  { color: "#4A7C6F", label: "Shared", vars: ["\\Sigma_{ab}", "\\rho", "M"] },
+]
 
 const TOC_ITEMS = [
   { id: "introduction", label: "Introduction" },
@@ -68,6 +75,7 @@ const CCAPost = () => {
           <div className="blog-toc-wrapper">
             <TableOfContents items={TOC_ITEMS} />
           </div>
+          <VariableLegend groups={CCA_LEGEND_GROUPS} scrollTargetId="setup" />
           <FigureContainer width="outset" caption="CCA finds directions in two datasets that are maximally correlated. Click Regenerate to draw new data.">
             <CCATeaser />
           </FigureContainer>
@@ -125,11 +133,11 @@ const CCAPost = () => {
 
           <p>
             Stack your observations into two
-            matrices: <InlineMath tex="X_a \in \mathbb{R}^{n \times p}" /> holds{" "}
-            <InlineMath tex="n" /> observations of <InlineMath tex="p" /> variables
+            matrices: <InlineMath tex="{\color{#4A90D9}X_a} \in \mathbb{R}^{n \times {\color{#4A90D9}p}}" /> holds{" "}
+            <InlineMath tex="n" /> observations of <InlineMath tex="{\color{#4A90D9}p}" /> variables
             from the first dataset, and{" "}
-            <InlineMath tex="X_b \in \mathbb{R}^{n \times q}" /> holds the same{" "}
-            <InlineMath tex="n" /> observations of <InlineMath tex="q" /> variables
+            <InlineMath tex="{\color{#D4783C}X_b} \in \mathbb{R}^{n \times {\color{#D4783C}q}}" /> holds the same{" "}
+            <InlineMath tex="n" /> observations of <InlineMath tex="{\color{#D4783C}q}" /> variables
             from the second. The rows are paired: row <InlineMath tex="i" /> in both
             matrices corresponds to the same trial, the same timepoint, or
             whatever links your two measurements together.
@@ -142,21 +150,21 @@ const CCAPost = () => {
 
           <p>
             CCA looks for weight
-            vectors <InlineMath tex="w_a \in \mathbb{R}^p" /> and{" "}
-            <InlineMath tex="w_b \in \mathbb{R}^q" /> that define one-dimensional
-            projections of each dataset, <InlineMath tex="X_a w_a" /> and{" "}
-            <InlineMath tex="X_b w_b" />, such that these projections are as
+            vectors <InlineMath tex="{\color{#4A90D9}w_a} \in \mathbb{R}^{{\color{#4A90D9}p}}" /> and{" "}
+            <InlineMath tex="{\color{#D4783C}w_b} \in \mathbb{R}^{{\color{#D4783C}q}}" /> that define one-dimensional
+            projections of each dataset, <InlineMath tex="{\color{#4A90D9}X_a w_a}" /> and{" "}
+            <InlineMath tex="{\color{#D4783C}X_b w_b}" />, such that these projections are as
             correlated as possible. Think of each weight vector as a "recipe" for
             combining variables: how much of neuron 1, how much of neuron 2, and so on.
           </p>
 
           <p>
             Three matrices govern the problem. The within-dataset covariance
-            matrices <InlineMath tex="\Sigma_{aa} = \tfrac{1}{n} X_a^\top X_a" />{" "}
-            and <InlineMath tex="\Sigma_{bb} = \tfrac{1}{n} X_b^\top X_b" />{" "}
+            matrices <InlineMath tex="{\color{#4A90D9}\Sigma_{aa}} = \tfrac{1}{n} {\color{#4A90D9}X_a}^\top {\color{#4A90D9}X_a}" />{" "}
+            and <InlineMath tex="{\color{#D4783C}\Sigma_{bb}} = \tfrac{1}{n} {\color{#D4783C}X_b}^\top {\color{#D4783C}X_b}" />{" "}
             describe the variance structure inside each dataset, that is, how the
             variables in each group relate to each other. The cross-covariance
-            matrix <InlineMath tex="\Sigma_{ab} = \tfrac{1}{n} X_a^\top X_b" />{" "}
+            matrix <InlineMath tex="{\color{#4A7C6F}\Sigma_{ab}} = \tfrac{1}{n} {\color{#4A90D9}X_a}^\top {\color{#D4783C}X_b}" />{" "}
             captures how variables in the first dataset co-vary with variables in
             the second, and this is the matrix that CCA ultimately exploits. Explore
             all three below.
@@ -170,18 +178,18 @@ const CCAPost = () => {
 
           <p>
             We want our projections to be maximally correlated. Writing this out,
-            the correlation between <InlineMath tex="X_a w_a" /> and{" "}
-            <InlineMath tex="X_b w_b" /> is:
+            the correlation between <InlineMath tex="{\color{#4A90D9}X_a w_a}" /> and{" "}
+            <InlineMath tex="{\color{#D4783C}X_b w_b}" /> is:
           </p>
 
           <Equation
-            tex="\rho = \operatorname{corr}(X_a w_a,\; X_b w_b) = \frac{w_a^\top \Sigma_{ab}\, w_b}{\sqrt{w_a^\top \Sigma_{aa}\, w_a}\;\sqrt{w_b^\top \Sigma_{bb}\, w_b}}"
+            tex="{\color{#4A7C6F}\rho} = \operatorname{corr}({\color{#4A90D9}X_a w_a},\; {\color{#D4783C}X_b w_b}) = \frac{{\color{#4A90D9}w_a}^\top {\color{#4A7C6F}\Sigma_{ab}}\, {\color{#D4783C}w_b}}{\sqrt{{\color{#4A90D9}w_a}^\top {\color{#4A90D9}\Sigma_{aa}}\, {\color{#4A90D9}w_a}}\;\sqrt{{\color{#D4783C}w_b}^\top {\color{#D4783C}\Sigma_{bb}}\, {\color{#D4783C}w_b}}}"
             number={1}
           />
 
           <p>
             Notice something about this formula: if you double{" "}
-            <InlineMath tex="w_a" />, the numerator doubles, but so does the
+            <InlineMath tex="{\color{#4A90D9}w_a}" />, the numerator doubles, but so does the
             denominator. Correlation is insensitive to scale; it only depends on
             direction. This means the optimization problem as stated has infinitely
             many equivalent solutions (any scalar multiple of an optimum is also an
@@ -199,7 +207,7 @@ const CCAPost = () => {
           </p>
 
           <Equation
-            tex="w_a^\top \Sigma_{aa}\, w_a = 1, \qquad w_b^\top \Sigma_{bb}\, w_b = 1"
+            tex="{\color{#4A90D9}w_a}^\top {\color{#4A90D9}\Sigma_{aa}}\, {\color{#4A90D9}w_a} = 1, \qquad {\color{#D4783C}w_b}^\top {\color{#D4783C}\Sigma_{bb}}\, {\color{#D4783C}w_b} = 1"
             number={2}
           />
 
@@ -210,7 +218,7 @@ const CCAPost = () => {
           </p>
 
           <Equation
-            tex="\max_{w_a,\, w_b}\; w_a^\top \Sigma_{ab}\, w_b \qquad \text{s.t.}\quad w_a^\top \Sigma_{aa}\, w_a = 1,\;\; w_b^\top \Sigma_{bb}\, w_b = 1"
+            tex="\max_{{\color{#4A90D9}w_a},\, {\color{#D4783C}w_b}}\; {\color{#4A90D9}w_a}^\top {\color{#4A7C6F}\Sigma_{ab}}\, {\color{#D4783C}w_b} \qquad \text{s.t.}\quad {\color{#4A90D9}w_a}^\top {\color{#4A90D9}\Sigma_{aa}}\, {\color{#4A90D9}w_a} = 1,\;\; {\color{#D4783C}w_b}^\top {\color{#D4783C}\Sigma_{bb}}\, {\color{#D4783C}w_b} = 1"
             number={3}
           />
 
@@ -222,7 +230,7 @@ const CCAPost = () => {
             multipliers, one for each constraint, and look for stationary points of
             the combined expression. The Lagrangian is:
             <Sidenote number={4}>
-              The factor of <InlineMath tex="\tfrac{1}{2}" /> in front of each
+              The factor of <InlineMath tex="\frac{1}{2}" /> in front of each
               multiplier is a convenience that simplifies the derivatives without
               changing the solution. This derivation follows
               Gundersen <Citation numbers={4} /> and
@@ -231,7 +239,7 @@ const CCAPost = () => {
           </p>
 
           <Equation
-            tex="\mathcal{L} = w_a^\top \Sigma_{ab}\, w_b \;-\; \frac{\lambda_1}{2}\!\left(w_a^\top \Sigma_{aa}\, w_a - 1\right) \;-\; \frac{\lambda_2}{2}\!\left(w_b^\top \Sigma_{bb}\, w_b - 1\right)"
+            tex="\mathcal{L} = {\color{#4A90D9}w_a}^\top {\color{#4A7C6F}\Sigma_{ab}}\, {\color{#D4783C}w_b} \;-\; \frac{\lambda_1}{2}\!\left({\color{#4A90D9}w_a}^\top {\color{#4A90D9}\Sigma_{aa}}\, {\color{#4A90D9}w_a} - 1\right) \;-\; \frac{\lambda_2}{2}\!\left({\color{#D4783C}w_b}^\top {\color{#D4783C}\Sigma_{bb}}\, {\color{#D4783C}w_b} - 1\right)"
             number={4}
           />
 
@@ -242,35 +250,35 @@ const CCAPost = () => {
           </p>
 
           <Equation
-            tex="\frac{\partial \mathcal{L}}{\partial w_a} = \Sigma_{ab}\, w_b - \lambda_1\, \Sigma_{aa}\, w_a = 0"
+            tex="\frac{\partial \mathcal{L}}{\partial {\color{#4A90D9}w_a}} = {\color{#4A7C6F}\Sigma_{ab}}\, {\color{#D4783C}w_b} - \lambda_1\, {\color{#4A90D9}\Sigma_{aa}}\, {\color{#4A90D9}w_a} = 0"
             number={5}
           />
 
           <Equation
-            tex="\frac{\partial \mathcal{L}}{\partial w_b} = \Sigma_{ba}\, w_a - \lambda_2\, \Sigma_{bb}\, w_b = 0"
+            tex="\frac{\partial \mathcal{L}}{\partial {\color{#D4783C}w_b}} = {\color{#4A7C6F}\Sigma_{ba}}\, {\color{#4A90D9}w_a} - \lambda_2\, {\color{#D4783C}\Sigma_{bb}}\, {\color{#D4783C}w_b} = 0"
             number={6}
           />
 
           <p>
-            where <InlineMath tex="\Sigma_{ba} = \Sigma_{ab}^\top" />. Each
+            where <InlineMath tex="{\color{#4A7C6F}\Sigma_{ba}} = {\color{#4A7C6F}\Sigma_{ab}}^\top" />. Each
             equation says the same thing: the gradient from the cross-covariance
             (pulling toward the other dataset's structure) is balanced by the
             gradient from the within-dataset covariance (enforcing the
             constraint). To see what the multipliers are,
             left-multiply equation (5) by{" "}
-            <InlineMath tex="w_a^\top" /> and equation (6) by{" "}
-            <InlineMath tex="w_b^\top" />:
+            <InlineMath tex="{\color{#4A90D9}w_a}^\top" /> and equation (6) by{" "}
+            <InlineMath tex="{\color{#D4783C}w_b}^\top" />:
           </p>
 
-          <BlockMath tex="w_a^\top \Sigma_{ab}\, w_b = \lambda_1\, w_a^\top \Sigma_{aa}\, w_a = \lambda_1" />
-          <BlockMath tex="w_b^\top \Sigma_{ba}\, w_a = \lambda_2\, w_b^\top \Sigma_{bb}\, w_b = \lambda_2" />
+          <BlockMath tex="{\color{#4A90D9}w_a}^\top {\color{#4A7C6F}\Sigma_{ab}}\, {\color{#D4783C}w_b} = \lambda_1\, {\color{#4A90D9}w_a}^\top {\color{#4A90D9}\Sigma_{aa}}\, {\color{#4A90D9}w_a} = \lambda_1" />
+          <BlockMath tex="{\color{#D4783C}w_b}^\top {\color{#4A7C6F}\Sigma_{ba}}\, {\color{#4A90D9}w_a} = \lambda_2\, {\color{#D4783C}w_b}^\top {\color{#D4783C}\Sigma_{bb}}\, {\color{#D4783C}w_b} = \lambda_2" />
 
           <p>
             The left-hand sides of these two expressions are scalars, and they are
             transposes of each other, so they must be equal. This forces{" "}
             <InlineMath tex="\lambda_1 = \lambda_2" />. And since the constraints
             set each projected variance to one, both multipliers equal the objective
-            value itself: <InlineMath tex="\lambda_1 = \lambda_2 = \rho" />, the
+            value itself: <InlineMath tex="\lambda_1 = \lambda_2 = {\color{#4A7C6F}\rho}" />, the
             canonical correlation.
             <Sidenote number={5}>
               The Lagrange multipliers, introduced as bookkeeping devices to enforce
@@ -283,46 +291,46 @@ const CCAPost = () => {
 
           <p>
             Equations (5) and (6) couple{" "}
-            <InlineMath tex="w_a" /> and <InlineMath tex="w_b" /> through the
+            <InlineMath tex="{\color{#4A90D9}w_a}" /> and <InlineMath tex="{\color{#D4783C}w_b}" /> through the
             covariance matrices. We can eliminate one unknown by solving
-            equation (6) for <InlineMath tex="w_b" />:
+            equation (6) for <InlineMath tex="{\color{#D4783C}w_b}" />:
           </p>
 
           <Equation
-            tex="w_b = \frac{1}{\rho}\, \Sigma_{bb}^{-1}\, \Sigma_{ba}\, w_a"
+            tex="{\color{#D4783C}w_b} = \frac{1}{{\color{#4A7C6F}\rho}}\, {\color{#D4783C}\Sigma_{bb}}^{-1}\, {\color{#4A7C6F}\Sigma_{ba}}\, {\color{#4A90D9}w_a}"
             number={7}
           />
 
           <p>
             Substituting this into equation (5) eliminates{" "}
-            <InlineMath tex="w_b" /> entirely:
+            <InlineMath tex="{\color{#D4783C}w_b}" /> entirely:
           </p>
 
-          <BlockMath tex="\Sigma_{ab}\!\left(\frac{1}{\rho}\, \Sigma_{bb}^{-1}\, \Sigma_{ba}\, w_a\right) = \rho\, \Sigma_{aa}\, w_a" />
+          <BlockMath tex="{\color{#4A7C6F}\Sigma_{ab}}\!\left(\frac{1}{{\color{#4A7C6F}\rho}}\, {\color{#D4783C}\Sigma_{bb}}^{-1}\, {\color{#4A7C6F}\Sigma_{ba}}\, {\color{#4A90D9}w_a}\right) = {\color{#4A7C6F}\rho}\, {\color{#4A90D9}\Sigma_{aa}}\, {\color{#4A90D9}w_a}" />
 
           <p>
             Rearranging and left-multiplying by{" "}
-            <InlineMath tex="\Sigma_{aa}^{-1}" /> gives an eigenvalue equation
-            in <InlineMath tex="w_a" /> alone:
+            <InlineMath tex="{\color{#4A90D9}\Sigma_{aa}}^{-1}" /> gives an eigenvalue equation
+            in <InlineMath tex="{\color{#4A90D9}w_a}" /> alone:
           </p>
 
           <Equation
-            tex="\Sigma_{aa}^{-1}\, \Sigma_{ab}\, \Sigma_{bb}^{-1}\, \Sigma_{ba}\, w_a = \rho^2\, w_a"
+            tex="{\color{#4A90D9}\Sigma_{aa}}^{-1}\, {\color{#4A7C6F}\Sigma_{ab}}\, {\color{#D4783C}\Sigma_{bb}}^{-1}\, {\color{#4A7C6F}\Sigma_{ba}}\, {\color{#4A90D9}w_a} = {\color{#4A7C6F}\rho}^2\, {\color{#4A90D9}w_a}"
             number={8}
           />
 
           <p>
             This is a standard eigenvalue problem. The
-            matrix <InlineMath tex="\Sigma_{aa}^{-1} \Sigma_{ab} \Sigma_{bb}^{-1} \Sigma_{ba}" />{" "}
+            matrix <InlineMath tex="{\color{#4A90D9}\Sigma_{aa}}^{-1} {\color{#4A7C6F}\Sigma_{ab}} {\color{#D4783C}\Sigma_{bb}}^{-1} {\color{#4A7C6F}\Sigma_{ba}}" />{" "}
             encodes the entire relationship between the two datasets, filtered
             through their individual covariance structures. Its eigenvalues
-            are <InlineMath tex="\rho^2" />, so the canonical correlations are the
-            square roots: <InlineMath tex="\rho_1 \geq \rho_2 \geq \cdots" />. The
+            are <InlineMath tex="{\color{#4A7C6F}\rho}^2" />, so the canonical correlations are the
+            square roots: <InlineMath tex="{\color{#4A7C6F}\rho_1} \geq {\color{#4A7C6F}\rho_2} \geq \cdots" />. The
             corresponding eigenvectors are the canonical weight
             vectors, the weight "recipes" from the setup.
             <Sidenote number={6}>
               The number of nonzero canonical correlations is at
-              most <InlineMath tex="\min(p, q)" />, the smaller of the two datasets'
+              most <InlineMath tex="\min({\color{#4A90D9}p}, {\color{#D4783C}q})" />, the smaller of the two datasets'
               dimensionalities. You can't find more shared directions than the
               lower-dimensional space has room for.
             </Sidenote>
@@ -360,7 +368,7 @@ const CCAPost = () => {
             In these whitened coordinates, finding the most correlated directions
             between the two datasets reduces to the
             singular value decomposition (SVD) of the whitened cross-covariance
-            matrix <InlineMath tex="\Sigma_{aa}^{-1/2}\, \Sigma_{ab}\, \Sigma_{bb}^{-1/2}" />.
+            matrix <InlineMath tex="{\color{#4A90D9}\Sigma_{aa}}^{-1/2}\, {\color{#4A7C6F}\Sigma_{ab}}\, {\color{#D4783C}\Sigma_{bb}}^{-1/2}" />.
             The singular values of this matrix are the canonical correlations,
             and the left and right singular vectors give the canonical directions
             in whitened space.
@@ -419,7 +427,7 @@ const CCAPost = () => {
             <Sidenote number={10}>
               The distribution of canonical correlations between independent
               Gaussian matrices is well-studied. As{" "}
-              <InlineMath tex="\min(p,q)/n \to 1" />, the largest canonical
+              <InlineMath tex="\min({\color{#4A90D9}p},{\color{#D4783C}q})/n \to 1" />, the largest canonical
               correlation converges to
               one <Citation numbers={8} />.
             </Sidenote>
@@ -427,8 +435,8 @@ const CCAPost = () => {
 
           <p>
             The figure below generates independent data (no shared structure)
-            and runs CCA. Start by keeping <InlineMath tex="p" /> and{" "}
-            <InlineMath tex="q" /> small relative to <InlineMath tex="n" />.
+            and runs CCA. Start by keeping <InlineMath tex="{\color{#4A90D9}p}" /> and{" "}
+            <InlineMath tex="{\color{#D4783C}q}" /> small relative to <InlineMath tex="n" />.
             Then drag them up. Watch how the canonical correlations inflate even
             though the data have nothing in common.
           </p>
@@ -474,7 +482,7 @@ const CCAPost = () => {
             The geometric perspective translates directly into code: center,
             whiten, SVD. Here is an implementation:
             <Sidenote number={12}>
-              This implementation assumes <InlineMath tex="n > \max(p, q)" /> so that
+              This implementation assumes <InlineMath tex="n > \max({\color{#4A90D9}p}, {\color{#D4783C}q})" /> so that
               the covariance matrices are full rank. When you have more variables than
               observations, use regularized covariance estimates (e.g.,
               shrinkage) <Citation numbers={3} />. For a practical overview of
@@ -526,7 +534,7 @@ def cca(X, Y):
     return s, W_x, W_y`} />
 
           <p>
-            The singular values of <InlineMath tex="M" /> are the canonical
+            The singular values of <InlineMath tex="{\color{#4A7C6F}M}" /> are the canonical
             correlations, and the left and right singular vectors (after un-whitening)
             give the canonical weight vectors for each dataset.
           </p>
@@ -539,7 +547,7 @@ def cca(X, Y):
             For each canonical pair, CCA returns a weight vector in each
             dataset and a correlation measuring how well the two projections
             track each other. These come in a ranked
-            sequence, <InlineMath tex="\rho_1 \geq \rho_2 \geq \cdots" />,
+            sequence, <InlineMath tex="{\color{#4A7C6F}\rho_1} \geq {\color{#4A7C6F}\rho_2} \geq \cdots" />,
             measuring how strongly the two datasets co-vary along each
             successive direction. The whitening-then-SVD pipeline separates
             the within-dataset structure from the between-dataset relationship
@@ -564,7 +572,7 @@ def cca(X, Y):
 
           <p>
             <strong>More observations than variables.</strong> The basic method
-            requires <InlineMath tex="n > \max(p, q)" /> so the covariance
+            requires <InlineMath tex="n > \max({\color{#4A90D9}p}, {\color{#D4783C}q})" /> so the covariance
             matrices are invertible. When this fails, you need regularization
             or dimensionality reduction as a preprocessing step.
           </p>
@@ -600,11 +608,14 @@ def cca(X, Y):
           </p>
 
           <p>
-            These limitations point directly to the methods I will cover in
-            future posts: nonlinear extensions, probabilistic formulations, and
-            approaches that relax the pairing requirement. CCA is the
-            foundation, and knowing where it breaks helps you know when to
-            reach for something stronger.
+            These limitations point directly to the methods covered in
+            the next post in this series:{" "}
+            <Link to="/blog/psid/">Preferential Subspace Identification</Link>{" "}
+            extends CCA to the time-series setting, replacing the static
+            cross-covariance with time-lagged Hankel matrices and adding
+            a behavioral relevance criterion. Beyond PSID, nonlinear extensions,
+            probabilistic formulations, and approaches that relax the pairing
+            requirement build on the same CCA foundation.
           </p>
 
           <h2 id="neighbors">CCA and its neighbors</h2>
@@ -651,6 +662,12 @@ def cca(X, Y):
                   <td>Rank constraint</td>
                   <td>Asymmetric: predicts Y from X</td>
                 </tr>
+                <tr>
+                  <td><Link to="/blog/psid/">PSID</Link></td>
+                  <td>Behavioral correlation</td>
+                  <td>State-space structure</td>
+                  <td>CCA on time-lagged Hankel matrices with behavioral relevance</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -659,10 +676,11 @@ def cca(X, Y):
             The choice between correlation (CCA), covariance (PLS), and
             prediction (RRR) depends on what you care about. CCA gives you
             paired linear directions with temporal correspondence, which is
-            exactly what cross-animal alignment needs. The next post will
-            address what happens when you want to relax one or more of those
-            constraints: nonlinear relationships, multiple datasets
-            simultaneously, or the absence of trial-matched observations.
+            exactly what cross-animal alignment needs.
+            The <Link to="/blog/psid/">next post</Link> shows how PSID
+            extends CCA to dynamical systems by replacing static
+            cross-covariance with time-lagged structure and adding a
+            behavioral relevance criterion.
           </p>
 
           <h2 id="references">References</h2>

@@ -23,6 +23,32 @@
   width: 100%;
 }
 
+.section-divider-labeled {
+  display: flex;
+  align-items: center;
+  margin: 64px 0;
+  width: 100%;
+}
+
+.section-divider-labeled::before,
+.section-divider-labeled::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: #000;
+}
+
+.section-divider-label {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #555;
+  padding: 0 20px;
+  white-space: nowrap;
+}
+
 /* Spotlight Column */
 .spotlight-column {
   position: sticky;

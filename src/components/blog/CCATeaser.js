@@ -36,9 +36,8 @@ function kde1d(values, gridMin, gridMax, nGrid, bandwidth) {
   return { grid, density }
 }
 
-// 2D density for contour blobs (simplified: just radial from mean)
+// 2D covariance ellipse from eigendecomposition
 function computeCloudPath(data, cx, cy, sx, sy, radiusFactor) {
-  // Compute mean and rough ellipse from data extents
   const n = data.length
   let mx = 0, my = 0
   for (const [x, y] of data) { mx += x; my += y }
@@ -52,14 +51,27 @@ function computeCloudPath(data, cx, cy, sx, sy, radiusFactor) {
   }
   varX /= n; varY /= n; covXY /= n
 
-  const sdx = Math.sqrt(varX) * radiusFactor
-  const sdy = Math.sqrt(varY) * radiusFactor
+  // Eigenvalues of 2x2 covariance matrix
+  const trace = varX + varY
+  const det = varX * varY - covXY * covXY
+  const disc = Math.sqrt(Math.max(0, trace * trace / 4 - det))
+  const lam1 = trace / 2 + disc
+  const lam2 = trace / 2 - disc
+
+  // Eigenvector angle (direction of first principal axis)
   const angle = 0.5 * Math.atan2(2 * covXY, varX - varY)
+
+  // Semi-axes from eigenvalues (in data units)
+  const sd1 = Math.sqrt(lam1) * radiusFactor
+  const sd2 = Math.sqrt(lam2) * radiusFactor
 
   const scx = sx(mx)
   const scy = sy(my)
-  const rx = Math.abs(sx(mx + sdx) - sx(mx))
-  const ry = Math.abs(sy(my) - sy(my + sdy))
+  // Map semi-axes to pixel space along the data coordinate directions
+  const pxPerUnitX = Math.abs(sx(mx + 1) - sx(mx))
+  const pxPerUnitY = Math.abs(sy(my) - sy(my + 1))
+  const rx = sd1 * pxPerUnitX
+  const ry = sd2 * pxPerUnitY
 
   // Negate angle to account for SVG y-axis pointing down
   return { cx: scx, cy: scy, rx, ry, angle: -(angle * 180) / Math.PI }

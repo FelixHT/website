@@ -647,7 +647,7 @@ export function generateData(n, rho1, rho2) {
 /**
  * Create an n x m matrix filled with zeros.
  */
-function zeros(n, m) {
+export function zeros(n, m) {
   const A = new Array(n)
   for (let i = 0; i < n; i++) {
     A[i] = new Float64Array(m)
@@ -658,7 +658,7 @@ function zeros(n, m) {
 /**
  * Create an n x n identity matrix.
  */
-function eye(n) {
+export function eye(n) {
   const I = zeros(n, n)
   for (let i = 0; i < n; i++) I[i][i] = 1
   return I
@@ -667,7 +667,7 @@ function eye(n) {
 /**
  * Transpose an n x m matrix.
  */
-function matT(A) {
+export function matT(A) {
   const n = A.length, m = A[0].length
   const T = zeros(m, n)
   for (let i = 0; i < n; i++)
@@ -679,7 +679,7 @@ function matT(A) {
 /**
  * Multiply two matrices A (n x k) and B (k x m).
  */
-function matMul(A, B) {
+export function matMul(A, B) {
   const n = A.length, k = A[0].length, m = B[0].length
   const C = zeros(n, m)
   for (let i = 0; i < n; i++)

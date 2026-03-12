@@ -1,11 +1,10 @@
 import * as React from "react"
-// import { Link } from "gatsby"
-// import { StaticImage } from "gatsby-plugin-image"
+import { Link } from "gatsby"
 import Layout from "../components/layout"
 import SpotlightCard from "../components/SpotlightCard"
 import ArticleCard from "../components/ArticleCard"
 import SpotlightCardAlt from "../components/SpotlightCardAlt"
-import BlogHeroCard from "../components/BlogHeroCard"
+import CCATeaser from "../components/blog/CCATeaser"
 import "./index.css"
 
 const IndexPage = () => {
@@ -109,7 +108,9 @@ const IndexPage = () => {
         </div>
 
         {/* Section divider */}
-        <div className="section-divider"></div>
+        <div className="section-divider-labeled">
+          <span className="section-divider-label">Selected publications</span>
+        </div>
 
         {/* Second spotlight section */}
         <div className="two-column-layout">
@@ -167,15 +168,58 @@ const IndexPage = () => {
         </div>
 
         {/* Section divider */}
-        <div className="section-divider"></div>
+        <div className="section-divider-labeled">
+          <span className="section-divider-label">Research notes</span>
+        </div>
 
         {/* Blog section */}
-        <BlogHeroCard
-          title="Canonical Correlation Analysis"
-          excerpt="A step-by-step derivation of CCA, from objective to eigenvalue problem, with geometric interpretation and implementation."
-          tag="Tutorial"
-          slug="/blog/cca/"
-        />
+        <div className="two-column-layout">
+          <div className="spotlight-column">
+            <Link to="/blog/cca/" style={{ textDecoration: "none", color: "inherit" }}>
+              <div className="spotlight-card">
+                <div className="spotlight-card__image" style={{ pointerEvents: "none" }}>
+                  <CCATeaser hero />
+                </div>
+                <div className="spotlight-card__content" style={{ backgroundColor: "#D0DDE8" }}>
+                  <div className="spotlight-card__meta">
+                    <div className="spotlight-card__label" style={{
+                      color: "#D0DDE8",
+                      backgroundColor: "black",
+                      border: "1px solid black"
+                    }}>Dimensionality</div>
+                    <div className="spotlight-card__issue" style={{
+                      color: "black",
+                      backgroundColor: "#D0DDE8",
+                      border: "1px solid black"
+                    }}>Reduction</div>
+                  </div>
+                  <h2 className="spotlight-card__title">Canonical Correlation Analysis</h2>
+                  <div className="spotlight-card__excerpt">
+                    <p>
+                      Finding shared structure between two high-dimensional datasets, derived from scratch with interactive figures.
+                    </p>
+                  </div>
+                  <div className="spotlight-card__footer">
+                    <div className="spotlight-card__author">March 2026</div>
+                    <span className="spotlight-card__link">Read more →</span>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          <div className="articles-column">
+            <ArticleCard
+              title="Preferential Subspace Identification"
+              author="Dimensionality Reduction"
+              description="Recovering latent dynamics from neural recordings and separating behaviorally relevant from irrelevant structure, derived from scratch."
+              tag="March 2026"
+              link="/blog/psid/"
+              borderColor="#4A90D9"
+              headerBgColor="rgba(74, 144, 217, 0.12)"
+            />
+          </div>
+        </div>
       </div>
     </Layout>
   );
