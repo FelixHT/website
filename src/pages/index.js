@@ -218,6 +218,15 @@ const IndexPage = () => {
               borderColor="#4A90D9"
               headerBgColor="rgba(74, 144, 217, 0.12)"
             />
+            <ArticleCard
+              title="Neuroscience Keeps Solving the Same Problems Twice"
+              author="Essay"
+              description="A structured claim-dependency layer for science, and an experiment to test whether it accelerates convergence."
+              tag="March 2026"
+              link="/blog/lean-for-science/"
+              borderColor="#7a6fa0"
+              headerBgColor="rgba(122, 111, 160, 0.12)"
+            />
           </div>
         </div>
       </div>
