@@ -78,7 +78,7 @@ const LeanForSciencePost = () => {
             in <em>Nature Neuroscience</em> <Citation numbers={1} /> showing
             that one of the most famous findings in motor neuroscience did not
             establish what many people thought it established.
-            Georgopoulos's <Citation numbers={16} /> population vector result
+            Georgopoulos's <Citation numbers={2} /> population vector result
             had become canonical evidence that neurons in primary motor cortex
             encode movement direction. Todorov accepted the correlations
             but argued the inference drawn from them was too strong. If motor cortex contributes to
@@ -100,7 +100,7 @@ const LeanForSciencePost = () => {
             dependency structure remained largely implicit. I encounter this
             directly. My own work develops methods for aligning neural
             representations across subjects and
-            species <Citation numbers={9} />, which requires reading across
+            species <Citation numbers={3} />, which requires reading across
             the motor, sensory, and prefrontal literatures simultaneously.
             Before I can compare results, I routinely spend weeks
             reconstructing which published claims are actually in tension,
@@ -168,7 +168,7 @@ const LeanForSciencePost = () => {
             </Sidenote>
             {" "}Once one asks not "what variable do neurons encode?" but "what
             control law does the circuit implement under sensory feedback and
-            biomechanical constraints?" <Citation numbers={22} />, many older
+            biomechanical constraints?" <Citation numbers={4} />, many older
             disputes look narrower than they first appeared. Yet the older
             framing persists because it is methodologically easier to
             operationalize.
@@ -192,21 +192,21 @@ const LeanForSciencePost = () => {
 
           <p>
             Churchland and colleagues' 2012 <em>Nature</em>{" "}
-            paper <Citation numbers={2} /> showed that reaching-related neural
+            paper <Citation numbers={5} /> showed that reaching-related neural
             population activity is well described by low-dimensional dynamics,
             including rotational structure revealed by jPCA. Sauerbrei and
-            colleagues <Citation numbers={3} /> then challenged an
+            colleagues <Citation numbers={6} /> then challenged an
             autonomous-generator reading: cortical activity during dexterous
             movement depends on continuous thalamic input. Kalidindi and
-            colleagues <Citation numbers={4} /> further showed that rotational
+            colleagues <Citation numbers={7} /> further showed that rotational
             structure is consistent with feedback-control models. The
             disagreement amounts to a model-identification problem, and the
             literature does not show where these emphases are compatible and
             where they genuinely conflict. Meanwhile, Kuzmina and
-            colleagues <Citation numbers={5} /> showed that preprocessing
+            colleagues <Citation numbers={8} /> showed that preprocessing
             choices can qualitatively affect whether rotational structure is
             detected, and Suresh and
-            colleagues <Citation numbers={11} /> showed that the dynamics seen
+            colleagues <Citation numbers={9} /> showed that the dynamics seen
             in reaching do not carry over to grasping. These are findings that
             should update the evidential status of earlier results. Instead,
             they remain buried as ordinary papers.
@@ -219,9 +219,9 @@ const LeanForSciencePost = () => {
             want synthesis lack infrastructure that makes it cheap. The citation
             graph makes things worse: it treats a supportive citation, a
             methodological critique, and a background nod as the same object.
-            Serra-Garcia and Gneezy <Citation numbers={14} /> found that
+            Serra-Garcia and Gneezy <Citation numbers={10} /> found that
             nonreplicable papers accumulate far more citations than replicable
-            ones. Greenberg <Citation numbers={15} /> traced one claim through
+            ones. Greenberg <Citation numbers={11} /> traced one claim through
             242 papers and found 94% of citations to primary data went to
             supportive studies. A flat citation graph is a poor memory system,
             especially when median statistical power in neuroscience is roughly
@@ -300,7 +300,7 @@ const LeanForSciencePost = () => {
             mean claims can link back to real data. Language models have changed
             the economics of structured extraction from text. And AI-assisted
             writing is accelerating paper production without adding
-            structure <Citation numbers={19} />, making the problem worse faster
+            structure <Citation numbers={13} />, making the problem worse faster
             than the field is building tools to address it.
           </p>
 
@@ -368,68 +368,68 @@ const LeanForSciencePost = () => {
               <em>Nature Neuroscience</em>, vol. 3, pp. 391–398, 2000.
             </li>
             <li id="ref-2" value="2">
+              A. P. Georgopoulos, A. B. Schwartz, R. E. Kettner, "Neuronal
+              population coding of movement direction,"{" "}
+              <em>Science</em>, vol. 233, pp. 1416–1419, 1986.
+            </li>
+            <li id="ref-3" value="3">
+              A. Ramot, F. H. Taschbach, Y. C. Yang, et al., "Motor learning
+              refines thalamic influence on motor cortex,"{" "}
+              <em>Nature</em>, 2025.
+            </li>
+            <li id="ref-4" value="4">
+              S. H. Scott, "Optimal feedback control and the neural basis of
+              volitional motor control,"{" "}
+              <em>Nature Reviews Neuroscience</em>, vol. 5, pp. 532–546, 2004.
+            </li>
+            <li id="ref-5" value="5">
               M. M. Churchland, J. P. Cunningham, et al., "Neural population
               dynamics during reaching,"{" "}
               <em>Nature</em>, vol. 487, pp. 51–56, 2012.
             </li>
-            <li id="ref-3" value="3">
+            <li id="ref-6" value="6">
               B. A. Sauerbrei, J.-Z. Guo, et al., "Cortical pattern generation
               during dexterous movement is input-driven,"{" "}
               <em>Nature</em>, vol. 577, pp. 386–391, 2020.
             </li>
-            <li id="ref-4" value="4">
+            <li id="ref-7" value="7">
               H. T. Kalidindi et al., "Rotational dynamics in motor cortex are
               consistent with a feedback controller,"{" "}
               <em>eLife</em>, vol. 10, e67256, 2021.
             </li>
-            <li id="ref-5" value="5">
+            <li id="ref-8" value="8">
               E. Kuzmina, D. Kriukov, M. Lebedev, "Neuronal travelling waves
               explain rotational dynamics in experimental datasets and
               modelling,"{" "}
               <em>Scientific Reports</em>, vol. 14, 3566, 2024.
             </li>
             <li id="ref-9" value="9">
-              A. Ramot, F. H. Taschbach, Y. C. Yang, et al., "Motor learning
-              refines thalamic influence on motor cortex,"{" "}
-              <em>Nature</em>, 2025.
-            </li>
-            <li id="ref-11" value="11">
               A. K. Suresh, J. M. Goodman, et al., "Neural population dynamics
               in motor cortex are different for reach and grasp,"{" "}
               <em>eLife</em>, vol. 9, e58848, 2020.
+            </li>
+            <li id="ref-10" value="10">
+              M. Serra-Garcia, U. Gneezy, "Nonreplicable publications are cited
+              more than replicable ones,"{" "}
+              <em>Science Advances</em>, vol. 7, eabd1705, 2021.
+            </li>
+            <li id="ref-11" value="11">
+              S. A. Greenberg, "How citation distortions create unfounded
+              authority: analysis of a citation network,"{" "}
+              <em>BMJ</em>, vol. 339, b2680, 2009.
             </li>
             <li id="ref-12" value="12">
               K. S. Button et al., "Power failure: why small sample size
               undermines the reliability of neuroscience,"{" "}
               <em>Nature Reviews Neuroscience</em>, vol. 14, pp. 365–376, 2013.
             </li>
-            <li id="ref-14" value="14">
-              M. Serra-Garcia, U. Gneezy, "Nonreplicable publications are cited
-              more than replicable ones,"{" "}
-              <em>Science Advances</em>, vol. 7, eabd1705, 2021.
-            </li>
-            <li id="ref-15" value="15">
-              S. A. Greenberg, "How citation distortions create unfounded
-              authority: analysis of a citation network,"{" "}
-              <em>BMJ</em>, vol. 339, b2680, 2009.
-            </li>
-            <li id="ref-16" value="16">
-              A. P. Georgopoulos, A. B. Schwartz, R. E. Kettner, "Neuronal
-              population coding of movement direction,"{" "}
-              <em>Science</em>, vol. 233, pp. 1416–1419, 1986.
-            </li>
-            <li id="ref-19" value="19">
+            <li id="ref-13" value="13">
               A. Narayanan, S. Kapoor,{" "}
               <em>
                 AI Snake Oil: What Artificial Intelligence Can Do, What It
                 Can't, and How to Tell the Difference
               </em>
               , Princeton University Press, 2024.
-            </li>
-            <li id="ref-22" value="22">
-              S. H. Scott, "Optimal feedback control and the neural basis of
-              volitional motor control,"{" "}
-              <em>Nature Reviews Neuroscience</em>, vol. 5, pp. 532–546, 2004.
             </li>
           </ol>
         </div>
