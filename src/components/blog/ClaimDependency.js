@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react"
-import { COLORS, TOOLTIP_STYLE, BTN_BASE, btnActive } from "./figureConstants"
+import { TOOLTIP_STYLE, BTN_BASE, btnActive } from "./figureConstants"
 
 const NODES = [
   { id:"claim", type:"claim", depth:0, parent:null,
@@ -8,7 +8,7 @@ const NODES = [
     sens:true },
   { id:"ev_rot", type:"evidence", depth:1, parent:"claim",
     title:"EVIDENCE",
-    body:"Rotational structure in jPCA plane\n(Churchland 2012, Fig. 2, R\u00b2 = 0.89)",
+    body:"Rotational structure in jPCA plane\n(Churchland 2012, R² = 0.89)",
     sens:true },
   { id:"ev_prep", type:"evidence", depth:1, parent:"claim",
     title:"EVIDENCE",
@@ -28,7 +28,7 @@ const NODES = [
     sens:false },
   { id:"pp_kern", type:"preproc", depth:3, parent:"meth",
     title:"PREPROCESSING",
-    body:"Gaussian smoothing\nkernel width: 20ms",
+    body:"Gaussian smoothing\nkernel width: 20 ms",
     sens:true },
   { id:"pp_avg", type:"preproc", depth:3, parent:"meth",
     title:"PREPROCESSING",
@@ -39,32 +39,32 @@ const NODES = [
     body:"Soft normalization\nof firing rates",
     sens:false },
   { id:"kuz", type:"flag", depth:3.5, parent:"pp_kern",
-    title:"SENSITIVITY FLAG (Kuzmina et al. 2024)",
-    body:"Kernel width 10ms vs 20ms qualitatively\nchanges whether rotations are detected",
+    title:"SENSITIVITY FLAG (Kuzmina 2024)",
+    body:"Kernel 10 vs 20 ms qualitatively\nchanges rotational detection",
     sens:false, isFlag:true },
   { id:"ds_russ", type:"downstream", depth:4, parent:"claim",
     title:"Russo et al. 2018 (Neuron)",
-    body:"Condition-invariant dynamics\nCentral: uses jPCA rotations as starting point",
+    body:"Condition-invariant dynamics\nUses jPCA rotations as basis",
     sens:true, depType:"central" },
   { id:"ds_bci", type:"downstream", depth:4, parent:"claim",
     title:"Dynamics-based BCI decoders",
-    body:"Use rotational subspace\nCentral: decoding assumes rotational structure",
+    body:"Use rotational subspace\nAssumes rotational structure",
     sens:true, depType:"central" },
   { id:"ds_gall", type:"downstream", depth:4, parent:"claim",
     title:"Gallego et al. 2017 (Neuron)",
-    body:"Neural manifolds for motor control\nContext: cites rotations, own claim is about manifolds broadly",
+    body:"Neural manifolds for motor control\nCites rotations broadly",
     sens:false, depType:"context" },
   { id:"ch_sauerb", type:"challenge", depth:5, parent:"claim",
     title:"CHALLENGE (Sauerbrei 2020)",
-    body:"M1 requires continuous thalamic input\nIndependent: optogenetics, mice",
+    body:"M1 needs continuous thalamic input\nOptogenetics, mice",
     sens:false, indep:true },
   { id:"ch_kalid", type:"challenge", depth:5, parent:"claim",
     title:"CHALLENGE (Kalidindi 2021)",
-    body:"Rotations consistent with feedback controller\nIndependent: computational model",
+    body:"Rotations from feedback controller\nComputational model",
     sens:false, indep:true },
   { id:"ch_sur", type:"challenge", depth:5, parent:"claim",
     title:"COMPLICATION (Suresh 2020)",
-    body:"Rotations for reaching, weak/absent for grasping\nPartially indep.: same arrays, diff. task",
+    body:"Reaching rotations, not grasping\nSame arrays, different task",
     sens:false, indep:true },
 ]
 
@@ -97,41 +97,55 @@ const NODE_FILLS = {
   challenge:  { bg:"#e8f5eb", border:"#80b090", bgAlert:"#e8f5eb", borderAlert:"#4a8c5c" },
 }
 
-const BASE_W = 920
-const ROW_HEIGHTS = { 0: 60, 1: 150, 2: 240, 3: 330, 3.5: 420, 4: 510, 5: 610 }
-const NODE_H = { 0: 52, 1: 52, 2: 48, 3: 44, 3.5: 48, 4: 56, 5: 60 }
-const NODE_W_BY_DEPTH = { 0: 380, 1: 240, 2: 220, 3: 190, 3.5: 340, 4: 210, 5: 220 }
-const TOTAL_H = 690
+/* ── Horizontal column layout ─────────────────── */
 
-function computeTreeLayout(nodes) {
-  const byDepth = {}
+const BASE_W = 1300
+const TOTAL_H = 400
+const NODE_W = 180
+const CLAIM_W = 220
+const NODE_H = 56
+const NODE_GAP = 18
+const HEADER_H = 36
+const COL_X = [100, 300, 490, 700, 920, 1140]
+const COL_LABELS = ["Preprocessing", "Methods", "Evidence", "", "Downstream", "Challenges"]
+
+const NODE_COL = {
+  pp_kern:0, kuz:0, pp_avg:0, pp_norm:0,
+  meth:1, exp:1, exp_prep:1,
+  ev_rot:2, ev_prep:2,
+  claim:3,
+  ds_russ:4, ds_bci:4, ds_gall:4,
+  ch_sauerb:5, ch_kalid:5, ch_sur:5,
+}
+
+const NODE_ROW = {
+  pp_kern:0, kuz:1, pp_avg:2, pp_norm:3,
+  meth:0, exp:1, exp_prep:2,
+  ev_rot:0, ev_prep:1,
+  claim:0,
+  ds_russ:0, ds_bci:1, ds_gall:2,
+  ch_sauerb:0, ch_kalid:1, ch_sur:2,
+}
+
+function computeLayout(nodes) {
+  const colCounts = {}
   nodes.forEach(n => {
-    const d = n.depth
-    if (!byDepth[d]) byDepth[d] = []
-    byDepth[d].push(n)
+    const col = NODE_COL[n.id]
+    if (col === undefined) return
+    colCounts[col] = Math.max(colCounts[col] || 0, (NODE_ROW[n.id] || 0) + 1)
   })
-
   const positions = {}
-  const margin = 40
-
-  Object.entries(byDepth).sort(([a], [b]) => a - b).forEach(([depth, group]) => {
-    const d = parseFloat(depth)
-    const y = ROW_HEIGHTS[d] || d * 100
-    const h = NODE_H[d] || 48
-    const w = NODE_W_BY_DEPTH[d] || 220
-    const totalW = BASE_W - margin * 2
-    const spacing = totalW / (group.length + 1)
-
-    group.forEach((n, i) => {
-      positions[n.id] = {
-        x: margin + spacing * (i + 1),
-        y,
-        w,
-        h,
-      }
-    })
+  const availH = TOTAL_H - HEADER_H
+  nodes.forEach(n => {
+    const col = NODE_COL[n.id]
+    const row = NODE_ROW[n.id]
+    if (col === undefined || row === undefined) return
+    const count = colCounts[col]
+    const w = col === 3 ? CLAIM_W : NODE_W
+    const totalH = count * NODE_H + (count - 1) * NODE_GAP
+    const startY = HEADER_H + (availH - totalH) / 2
+    positions[n.id] = { x: COL_X[col], y: startY + row * (NODE_H + NODE_GAP), w, h: NODE_H }
   })
-
   return positions
 }
 
@@ -142,7 +156,7 @@ const ClaimDependency = () => {
   const [cascadeStep, setCascadeStep] = useState(-1)
   const [hovered, setHovered] = useState(null)
 
-  const positions = useMemo(() => computeTreeLayout(NODES), [])
+  const positions = useMemo(() => computeLayout(NODES), [])
 
   const handlePropagate = useCallback(() => {
     if (propagated) {
@@ -197,7 +211,6 @@ const ClaimDependency = () => {
     if (e.dep === "context") { col = "#bbb"; sw = 1.2; dash = "5 3" }
     if (e.dep === "flag") { col = "#c0503a"; sw = 1.5; dash = "5 3" }
     if (e.dep === "challenge") { col = "#80b090"; sw = 1.2 }
-
     if (edgeActive) {
       if (e.dep === "flag") { col = "#c0503a"; sw = 2.5; dash = "6 3" }
       else if (e.dep === "challenge") { col = "#4a8c5c"; sw = 2 }
@@ -224,23 +237,53 @@ const ClaimDependency = () => {
         preserveAspectRatio="xMidYMid meet"
         style={{ display: "block", overflow: "visible" }}>
 
+        {/* Column headers */}
+        {COL_LABELS.map((label, i) => label && (
+          <text key={i} x={COL_X[i]} y={22} textAnchor="middle"
+            style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 500,
+              fill: "rgba(0,0,0,0.32)", letterSpacing: "0.05em" }}>
+            {label.toUpperCase()}
+          </text>
+        ))}
+
+        {/* Edges */}
         {EDGES.map((e, i) => {
           const fp = positions[e.from]
           const tp = positions[e.to]
           if (!fp || !tp) return null
-          const x1 = fp.x, y1 = fp.y + fp.h
-          const x2 = tp.x, y2 = tp.y
-          const my = (y1 + y2) / 2
+          const fromCol = NODE_COL[e.from]
+          const toCol = NODE_COL[e.to]
           const s = getEdgeStyle(e)
+
+          let d
+          if (fromCol === toCol) {
+            const upper = NODE_ROW[e.from] < NODE_ROW[e.to] ? fp : tp
+            const lower = NODE_ROW[e.from] < NODE_ROW[e.to] ? tp : fp
+            const x1 = upper.x, y1 = upper.y + upper.h
+            const x2 = lower.x, y2 = lower.y
+            const my = (y1 + y2) / 2
+            d = `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`
+          } else {
+            const leftIsFrom = fromCol < toCol
+            const left = leftIsFrom ? fp : tp
+            const right = leftIsFrom ? tp : fp
+            const x1 = left.x + left.w / 2
+            const y1 = left.y + left.h / 2
+            const x2 = right.x - right.w / 2
+            const y2 = right.y + right.h / 2
+            const mx = (x1 + x2) / 2
+            d = `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`
+          }
+
           return (
-            <path key={i}
-              d={`M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`}
+            <path key={i} d={d}
               fill="none" stroke={s.col} strokeWidth={s.sw}
               strokeDasharray={s.dash || undefined}
               style={{ transition: "stroke 300ms ease, stroke-width 300ms ease" }} />
           )
         })}
 
+        {/* Nodes */}
         {NODES.map(n => {
           const pos = positions[n.id]
           if (!pos) return null
@@ -258,15 +301,15 @@ const ClaimDependency = () => {
               <rect x={rx} y={pos.y} width={pos.w} height={pos.h} rx={4} ry={4}
                 fill={bg} stroke={border} strokeWidth={1.5}
                 style={{ transition: "fill 300ms ease, stroke 300ms ease" }} />
-              {lines.map((line, i) => {
-                const isLabel = i === 0
+              {lines.map((line, li) => {
+                const isLabel = li === 0
                 const isDetail = !isLabel && line.length > 30
                 const fs = isLabel ? 8.5 : isDetail ? 9 : 10.5
                 const fill = isLabel ? labelCol : (fs <= 9 ? "#888" : "#2a2a2a")
                 const fw = isLabel ? 600 : (fs <= 9 ? 400 : 600)
-                const ty = pos.y + 13 + i * (fs + 2.5)
+                const ty = pos.y + 13 + li * (fs + 2.5)
                 return (
-                  <text key={i} x={pos.x} y={ty} textAnchor="middle"
+                  <text key={li} x={pos.x} y={ty} textAnchor="middle"
                     fontSize={fs} fontWeight={fw} fill={fill}>
                     {line}
                   </text>
@@ -288,19 +331,22 @@ const ClaimDependency = () => {
         })}
       </svg>
 
+      {/* Tooltip */}
       {hovered && (() => {
         const n = NODES.find(nd => nd.id === hovered)
         const pos = positions[hovered]
         if (!n || !pos) return null
         const xPct = (pos.x / BASE_W) * 100
         const yPct = (pos.y / TOTAL_H) * 100
-        const flipLeft = pos.x / BASE_W > 0.6
+        const halfWPct = ((pos.w / 2) / BASE_W) * 100
+        const flipLeft = pos.x / BASE_W > 0.55
+
         return (
           <div style={{
             ...TOOLTIP_STYLE,
-            left: flipLeft ? "auto" : `calc(${xPct}% + ${pos.w / 2 + 10}px)`,
-            right: flipLeft ? `calc(${100 - xPct}% + ${pos.w / 2 + 10}px)` : "auto",
-            top: `calc(${yPct}%)`,
+            left: flipLeft ? "auto" : `${xPct + halfWPct + 1}%`,
+            right: flipLeft ? `${100 - xPct + halfWPct + 1}%` : "auto",
+            top: `${yPct}%`,
           }}>
             <div style={{ fontFamily: "var(--font-sans)", fontWeight: 700, color: "rgba(0,0,0,0.9)", marginBottom: 2 }}>
               {n.title}
@@ -312,6 +358,7 @@ const ClaimDependency = () => {
         )
       })()}
 
+      {/* Legend */}
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 14,
         paddingTop: 12, borderTop: "1px solid #e8e8e4" }}>
         {[

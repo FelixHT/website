@@ -288,6 +288,7 @@
 
 .blog-figure {
   margin: 2.5rem 0;
+  max-width: 780px;
 }
 
 .blog-figure__caption {
