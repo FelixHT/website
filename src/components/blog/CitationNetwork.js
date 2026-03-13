@@ -121,6 +121,18 @@ function computeLayout(width, height) {
 
 const CitationNetwork = () => {
   const containerRef = useRef(null)
+  const [isNarrow, setIsNarrow] = useState(false)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect?.width ?? 900
+      setIsNarrow(width < 768)
+    })
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [])
+
   const [focused, setFocused] = useState(null) // paper id
 
   // Build adjacency set for the focused node (computed once per focus change, not per-paper)
@@ -134,7 +146,8 @@ const CitationNetwork = () => {
     return set
   }, [focused])
 
-  const W = 900, H = 500
+  const W = 900
+  const H = isNarrow ? 700 : 500
   const layout = computeLayout(W, H)
   const { nodePos, edgePaths, eraRects, laneLabels } = layout
 
@@ -221,14 +234,16 @@ const CitationNetwork = () => {
                 fill={COLORS[p.g]} fillOpacity={opacity}
                 stroke={isActive ? COLORS[p.g] : "none"} strokeWidth={isActive ? 2 : 0}
                 style={{ transition:"fill-opacity 200ms ease, stroke-width 200ms ease" }} />
-              <text x={pos.cx} y={pos.cy + pos.r + 12} textAnchor="middle"
-                style={{ fontFamily:"var(--font-sans)", fontSize:11, fontWeight:600,
-                  fill:`rgba(42,42,42,${isFaded ? 0.12 : 0.8})`,
-                  transition:"fill 200ms ease" }}>
-                {lines.map((line, i) => (
-                  <tspan key={i} x={pos.cx} dy={i === 0 ? 0 : "1.2em"}>{line}</tspan>
-                ))}
-              </text>
+              {(!isNarrow || p.c > 500) && (
+                <text x={pos.cx} y={pos.cy + pos.r + 12} textAnchor="middle"
+                  style={{ fontFamily:"var(--font-sans)", fontSize:11, fontWeight:600,
+                    fill:`rgba(42,42,42,${isFaded ? 0.12 : 0.8})`,
+                    transition:"fill 200ms ease" }}>
+                  {lines.map((line, i) => (
+                    <tspan key={i} x={pos.cx} dy={i === 0 ? 0 : "1.2em"}>{line}</tspan>
+                  ))}
+                </text>
+              )}
             </g>
           )
         })}
