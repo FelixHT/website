@@ -121,9 +121,28 @@ function computeLayout(width, height) {
 
 const CitationNetwork = () => {
   const containerRef = useRef(null)
+  const [focused, setFocused] = useState(null) // paper id
+
+  // Build adjacency set for the focused node (computed once per focus change, not per-paper)
+  const focusedConnections = useMemo(() => {
+    if (!focused) return new Set()
+    const set = new Set()
+    EDGES.forEach(([s, t]) => {
+      if (s === focused) set.add(t)
+      if (t === focused) set.add(s)
+    })
+    return set
+  }, [focused])
+
   const W = 900, H = 500
   const layout = computeLayout(W, H)
   const { nodePos, edgePaths, eraRects, laneLabels } = layout
+
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === "Escape") setFocused(null) }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [])
 
   return (
     <div ref={containerRef} style={{ position: "relative" }}>
@@ -136,6 +155,8 @@ const CitationNetwork = () => {
         aria-label="Citation network of motor cortex research papers from 1968 to 2024, organized by paradigm"
       >
         <title>Citation network of motor cortex research, 1968–2024</title>
+        <rect x={0} y={0} width={W} height={H} fill="transparent"
+          onClick={() => setFocused(null)} />
 
         {/* Era shading */}
         {eraRects.map(e => (
@@ -160,33 +181,107 @@ const CitationNetwork = () => {
         ))}
 
         {/* Edges */}
-        {edgePaths.map((e, i) => (
-          <path key={i} d={e.d} fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth={0.8} />
-        ))}
+        {edgePaths.map((e, i) => {
+          const srcPaper = PAPERS.find(p => p.id === e.sid)
+          const tgtPaper = PAPERS.find(p => p.id === e.tid)
+          const involved = focused && (e.sid === focused || e.tid === focused)
+          const isFaded = focused && !involved
+          const crossParadigm = srcPaper && tgtPaper && srcPaper.g !== tgtPaper.g
 
-        {/* Nodes */}
-        {PAPERS.map(p => {
-          const pos = nodePos[p.id]
           return (
-            <circle key={p.id} cx={pos.cx} cy={pos.cy} r={pos.r}
-              fill={COLORS[p.g]} fillOpacity={0.7} />
+            <path key={i} d={e.d} fill="none"
+              stroke={involved ? COLORS[srcPaper.g] : isFaded ? "rgba(0,0,0,0.03)" : "rgba(0,0,0,0.07)"}
+              strokeWidth={involved ? 1.5 : 0.8}
+              strokeDasharray={involved && crossParadigm ? "4 3" : "none"}
+              style={{ transition:"stroke 200ms ease, stroke-width 200ms ease" }} />
           )
         })}
 
-        {/* Labels */}
+        {/* Nodes and Labels */}
         {PAPERS.map(p => {
           const pos = nodePos[p.id]
+          const isActive = focused === p.id
+          const isConnected = focused && focusedConnections.has(p.id)
+          const isFaded = focused && !isActive && !isConnected
+          const opacity = isFaded ? 0.1 : (isActive ? 1 : 0.7)
           const lines = p.l.split("\n")
+
           return (
-            <text key={`label-${p.id}`} x={pos.cx} y={pos.cy + pos.r + 12} textAnchor="middle"
-              style={{ fontFamily:"var(--font-sans)", fontSize:11, fontWeight:600, fill:"rgba(42,42,42,0.8)" }}>
-              {lines.map((line, i) => (
-                <tspan key={i} x={pos.cx} dy={i === 0 ? 0 : "1.2em"}>{line}</tspan>
-              ))}
-            </text>
+            <g key={p.id}
+              onMouseEnter={() => { if (!focused) setFocused(p.id) }}
+              onMouseLeave={() => setFocused(null)}
+              onClick={() => setFocused(prev => prev === p.id ? null : p.id)}
+              onFocus={() => setFocused(p.id)}
+              onBlur={() => setFocused(null)}
+              style={{ cursor:"pointer" }}
+              role="button" tabIndex={0} aria-label={p.l.replace("\n"," ")}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFocused(prev => prev === p.id ? null : p.id) }}}
+            >
+              <circle cx={pos.cx} cy={pos.cy} r={pos.r}
+                fill={COLORS[p.g]} fillOpacity={opacity}
+                stroke={isActive ? COLORS[p.g] : "none"} strokeWidth={isActive ? 2 : 0}
+                style={{ transition:"fill-opacity 200ms ease, stroke-width 200ms ease" }} />
+              <text x={pos.cx} y={pos.cy + pos.r + 12} textAnchor="middle"
+                style={{ fontFamily:"var(--font-sans)", fontSize:11, fontWeight:600,
+                  fill:`rgba(42,42,42,${isFaded ? 0.12 : 0.8})`,
+                  transition:"fill 200ms ease" }}>
+                {lines.map((line, i) => (
+                  <tspan key={i} x={pos.cx} dy={i === 0 ? 0 : "1.2em"}>{line}</tspan>
+                ))}
+              </text>
+            </g>
           )
         })}
       </svg>
+
+      {focused && (() => {
+        const paper = PAPERS.find(p => p.id === focused)
+        const pos = nodePos[focused]
+        if (!paper || !pos) return null
+
+        const xPct = (pos.cx / W) * 100
+        const yPct = (pos.cy / H) * 100
+        const flipLeft = pos.cx / W > 0.6
+
+        return (
+          <div style={{
+            position:"absolute",
+            left: flipLeft ? "auto" : `calc(${xPct}% + 14px)`,
+            right: flipLeft ? `calc(${100 - xPct}% + 14px)` : "auto",
+            top: `calc(${yPct}% - 10px)`,
+            background:"rgba(250,249,246,0.95)",
+            backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)",
+            border:"1px solid rgba(0,0,0,0.08)",
+            borderRadius:6, padding:"10px 14px",
+            boxShadow:"0 2px 12px rgba(0,0,0,0.06)",
+            maxWidth:280, pointerEvents:"none", zIndex:10,
+            lineHeight:1.5, fontSize:"12.5px",
+          }}>
+            <div style={{ fontFamily:"var(--font-sans)", fontWeight:700, color:"rgba(0,0,0,0.9)", marginBottom:2 }}>
+              {paper.l.replace("\n"," ")}
+            </div>
+            <div style={{ fontFamily:"var(--font-serif)", fontStyle:"italic", color:"rgba(0,0,0,0.6)", marginBottom:4 }}>
+              {paper.j}
+            </div>
+            <div style={{ fontFamily:"var(--font-serif)", color:"rgba(0,0,0,0.75)", marginBottom:4 }}>
+              {paper.d}
+            </div>
+            <div style={{ fontFamily:"var(--font-mono)", fontSize:"11px", color:"rgba(0,0,0,0.4)" }}>
+              ~{paper.c.toLocaleString()} citations
+            </div>
+          </div>
+        )
+      })()}
+
+      <div style={{ display:"flex", gap:16, flexWrap:"wrap", marginTop:10 }}>
+        {LANES.map(l => (
+          <div key={l.key} style={{ display:"flex", alignItems:"center", gap:5,
+            fontFamily:"var(--font-mono)", fontSize:"0.72rem", color:"rgba(0,0,0,0.5)" }}>
+            <div style={{ width:9, height:9, borderRadius:"50%", background:COLORS[l.key], flexShrink:0 }} />
+            {l.label}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
