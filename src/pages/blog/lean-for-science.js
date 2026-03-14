@@ -80,15 +80,12 @@ const LeanForSciencePost = () => {
             establish what many people thought it established.
             Georgopoulos's <Citation numbers={11} /> population vector result
             had become canonical evidence that neurons in primary motor cortex
-            encode movement direction. Todorov accepted the correlations
-            but argued the inference drawn from them was too strong. If motor cortex contributes to
-            muscle activation, and movement emerges through the geometry and
+            encode movement direction. Todorov accepted the correlations but
+            argued the inference was too strong: if motor cortex contributes to
+            muscle activation and movement emerges through the geometry and
             dynamics of the arm, then direction-related neural activity can
-            arise as a fairly generic consequence of the output mapping from
-            neural commands to bodily motion. Tuning to direction is not by
-            itself decisive evidence for an abstract representational code. It
-            may instead be an expected byproduct of controlling a biomechanical
-            plant.
+            arise as a byproduct of controlling a biomechanical plant rather
+            than as evidence for an abstract representational code.
           </p>
 
           <p>
@@ -112,14 +109,12 @@ const LeanForSciencePost = () => {
 
           <p>
             This pattern is not unique to motor neuroscience, but motor cortex
-            is a particularly clean example because the arguments are well
-            documented. A field makes a strong claim. A critique appears and is
-            absorbed unevenly. A new literature grows on top of the old one.
-            Later, the same dispute returns under a different label. Part of
-            this is normal progress. But part of it reflects that the literature
-            has very weak machinery for representing what a claim depends on,
-            what later results challenge it, and which disputes are substantive
-            rather than terminological.
+            is a particularly clean example. A field makes a strong claim. A
+            critique appears and is absorbed unevenly. A new literature grows
+            on top. Later, the same dispute returns under a different label.
+            Part of this is normal progress. But part of it reflects very weak
+            machinery for representing what a claim depends on and which
+            disputes are substantive rather than terminological.
           </p>
 
           <p>
@@ -136,15 +131,14 @@ const LeanForSciencePost = () => {
           </p>
 
           <p>
-            Modern scientific databases can tell us that Paper A cites Paper B
-            and that both concern motor cortex. What they cannot do is represent
-            the internal structure of those claims: whether Paper A's core
-            inference depends on a particular smoothing kernel, whether Paper C
-            later showed that this kernel can qualitatively change the result,
-            or whether Paper D's apparent disagreement is really about theory,
+            Modern scientific databases can tell us that Paper A cites Paper B.
+            What they cannot represent is whether Paper A's core inference
+            depends on a particular smoothing kernel, whether Paper C later
+            showed that this kernel qualitatively changes the result, or whether
+            Paper D's apparent disagreement is really about theory,
             preprocessing, or task regime. They index documents, not claims. The
-            distinction matters because much of scientific disagreement is not
-            about raw observations. It is about dependency structure.
+            distinction matters because much of scientific disagreement is about
+            dependency structure, not raw observations.
           </p>
 
           <h2 id="recycling">The recycling pattern</h2>
@@ -184,10 +178,9 @@ const LeanForSciencePost = () => {
           <h2 id="tensions">Tensions the literature does not surface</h2>
 
           <p>
-            The current motor cortex literature contains several high-profile
-            findings that pull in different directions, but no standard
-            database exposes their dependency structure in a way that
-            would make those tensions obvious to a newcomer.
+            The current motor cortex literature contains high-profile findings
+            that pull in different directions, but no standard database exposes
+            their dependency structure.
           </p>
 
           <p>
@@ -217,14 +210,14 @@ const LeanForSciencePost = () => {
           <p>
             Incentive explanations are real but incomplete. Even researchers who
             want synthesis lack infrastructure that makes it cheap. The citation
-            graph makes things worse: it treats a supportive citation, a
-            methodological critique, and a background nod as the same object.
+            graph makes things worse: it treats supportive citations,
+            methodological critiques, and background nods as the same object.
             Serra-Garcia and Gneezy <Citation numbers={9} /> found that
             nonreplicable papers accumulate far more citations than replicable
             ones. Greenberg <Citation numbers={10} /> traced one claim through
-            242 papers and found 94% of citations to primary data went to
-            supportive studies. A flat citation graph is a poor memory system,
-            especially when median statistical power in neuroscience is roughly
+            242 papers and found 94% of citations went to supportive studies. A
+            flat citation graph is a poor memory system, especially when median
+            statistical power in neuroscience is roughly
             21% <Citation numbers={8} />.
           </p>
 
@@ -242,18 +235,22 @@ const LeanForSciencePost = () => {
               proposed here starts with the claim and dependency layers, where
               the gap is most acute.
             </Sidenote>
-            {" "}The missing object is a structured claim layer tied to
-            an explicit dependency layer. The unit would not be the paper; it
-            would be the claim, with typed edges for evidence, dependency,
-            challenge, replication, and scope restriction. In mathematics,
-            Lean and Mathlib have begun to represent theorems as structured
-            objects with explicit dependency chains; empirical science has no
-            equivalent for its claims. A dependency layer
-            would record what each claim relies on: data source, preprocessing
-            pipeline, model class, statistical test, species, and task design.
-            Later work could challenge
-            a specific dependency, replicate under altered conditions, or leave
-            the core claim untouched while narrowing its domain of validity.
+            {" "}The missing object is a formal claim layer with enforced
+            dependency typing. In mathematics, Lean and Mathlib represent
+            theorems as structured objects: you cannot state a result that
+            references undefined terms or produces a type mismatch, and the
+            full dependency chain from axioms to theorem is machine-checkable.
+            Empirical science has no equivalent. The analog would be a system
+            where a claim cannot be registered without declaring its
+            dependencies in a typed schema (species, task regime, recording
+            method, preprocessing pipeline, analysis method, statistical
+            test) and where the system can then mechanically check whether a
+            claimed replication actually shares the relevant dependencies,
+            whether an apparent contradiction is really about different
+            preprocessing, and which downstream claims inherit a challenged
+            assumption. The unit would not be the paper; it would be the claim,
+            with typed edges for evidence, dependency, challenge, replication,
+            and scope restriction.
           </p>
 
           <FigureContainer
@@ -266,18 +263,22 @@ const LeanForSciencePost = () => {
           <h2 id="what-it-would-do">What it would actually do</h2>
 
           <p>
-            Consider rotational dynamics. Churchland's paper would appear
-            as an explicit claim: reaching
-            activity shows rotational structure under a particular analysis
-            pipeline, with dependencies on Utah-array recordings in macaques,
-            condition averaging, Gaussian smoothing, dimensionality reduction,
-            and jPCA. Kuzmina's paper would then attach not to the document in
-            general but to one dependency: the detection of rotational structure
-            depends strongly on preprocessing. That update would propagate
-            selectively. Studies whose inference depends on similar smoothing
-            would be flagged. Studies reaching related conclusions through
-            optogenetic perturbation or feedback-control modeling would remain
-            unaffected.
+            Consider rotational dynamics. Churchland's claim would be
+            registered with its typed dependencies: Utah-array recordings in
+            macaques, condition averaging, Gaussian smoothing at ~20 ms,
+            dimensionality reduction via PCA, and jPCA. Kuzmina's finding would
+            attach not to the document but to a specific dependency node:
+            smoothing kernel width qualitatively affects rotational detection.
+            The system would then mechanically propagate that sensitivity flag
+            to every downstream claim whose dependency signature includes
+            compatible smoothing parameters. Studies reaching related
+            conclusions through optogenetic perturbation or feedback-control
+            modeling would remain unaffected because their dependency types do not
+            match the challenged node. A new paper claiming to replicate
+            rotational dynamics in a different species or task would need to
+            declare whether its preprocessing is type-compatible with the
+            original, making the scope of the claim explicit rather than
+            implicit.
           </p>
 
           <FigureContainer
@@ -288,11 +289,12 @@ const LeanForSciencePost = () => {
           </FigureContainer>
 
           <p>
-            This selective propagation is the point. The current system has two
-            modes: nothing happens, or a human reader keeps the whole web of
-            dependencies in their head. A claim-dependency layer would create
-            an intermediate possibility where challenges move along epistemic
-            edges rather than only through social memory.
+            This is the key difference from a curated knowledge graph. The
+            value is not that humans maintain a database. It is that the formal
+            layer makes dependency propagation automatic: challenges move along
+            typed edges rather than through social memory, and apparent
+            contradictions can be mechanically decomposed into disagreements
+            about theory, preprocessing, or task regime.
           </p>
 
           <h2 id="experiment">The experiment</h2>
@@ -308,17 +310,19 @@ const LeanForSciencePost = () => {
           </p>
 
           <p>
-            I propose a motor-neuroscience pilot that builds a
-            claim-dependency graph for a bounded literature and tests whether it
-            improves synthesis relative to standard paper search. The output is
-            a public resource for the field. The language models bootstrap
-            structured entries that domain experts then verify and correct. The
-            intervention is the resulting public infrastructure
-            layer, which no existing institution is built to maintain:
-            universities do not reward infrastructure, grant panels evaluate
-            novelty, and publishers have no reason to flag contradictions in
-            their own product. This requires a dedicated team, likely structured
-            as something like a Focused Research Organization.
+            I propose a motor-neuroscience pilot that builds a typed
+            claim-dependency graph for a bounded literature and tests whether
+            its formal structure captures real epistemic risk. The output is a
+            public resource for the field. Language models and domain experts
+            bootstrap the initial corpus, but the long-term value is in the
+            formal layer itself: a schema that enforces dependency declarations,
+            enables mechanical propagation of challenges, and makes the scope
+            of every claim explicit. No existing institution is built to
+            maintain this: universities do not reward infrastructure, grant
+            panels evaluate novelty, and publishers have no reason to flag
+            contradictions in their own product. This requires a dedicated
+            team, likely structured as something like a Focused Research
+            Organization.
             <Sidenote number={3}>
               The GenBank model is instructive. GenBank succeeded because
               journal mandates made data deposition a publication requirement,
@@ -332,12 +336,14 @@ const LeanForSciencePost = () => {
 
           <p>
             Concretely: assemble a corpus of roughly 300–500 core papers in
-            motor population coding and dynamics. Define a schema covering
-            claims, evidence types, species, task regimes, preprocessing
-            dependencies, and challenge or replication edges. Use language
-            models to propose candidate entries; have domain experts adjudicate.
+            motor population coding and dynamics. Define a typed schema: each
+            claim declares its species, task regime, recording method,
+            preprocessing parameters, analysis method, and statistical test as
+            structured fields, with typed edges for evidence, challenge,
+            replication, and scope restriction. Use language models to propose
+            candidate entries; have domain experts adjudicate the typing.
             Release the resulting graph publicly. Then test whether the graph's
-            structure predicts real scientific outcomes. Claims with more
+            formal structure predicts real scientific outcomes. Claims with more
             preprocessing dependencies, fewer independent replications, and
             narrower task or species coverage should be more fragile. Derive a
             fragility score from the graph topology and test whether it
@@ -352,17 +358,17 @@ const LeanForSciencePost = () => {
           <p>
             The result would be informative either way. If graph-derived
             fragility scores predict where challenges actually landed, that is
-            evidence that the dependency structure captures something real about
+            evidence that formal dependency typing captures something real about
             epistemic risk, and the approach generalizes to any subfield with
             similar structure. If the most-challenged claims have no distinctive
             dependency signature, then the bottleneck is less infrastructural
             than I hypothesize, and future effort should target incentives and
             institutions instead. Empirical science has built data
             infrastructure and computational infrastructure. What it still
-            lacks is claim infrastructure. Building that layer for one domain
-            would be a concrete experiment in whether improving the memory of
-            the scientific record can accelerate the accumulation of reliable
-            knowledge.
+            lacks is claim infrastructure, a <strong>Lean for science</strong>. Building that
+            layer for one domain would be a concrete experiment in whether
+            formalizing the dependency structure of the scientific record can
+            accelerate the accumulation of reliable knowledge.
           </p>
 
           <h2 id="references">References</h2>
@@ -453,7 +459,7 @@ const LeanForSciencePost = () => {
 
 export const Head = () => (
   <title>
-    Neuroscience Keeps Solving the Same Problems Twice — Felix Taschbach
+    Neuroscience Keeps Solving the Same Problems Twice | Felix Taschbach
   </title>
 )
 
