@@ -3,7 +3,7 @@ import { scaleLinear, scaleSqrt } from "d3-scale"
 import { COLORS, BREAKPOINTS, TOOLTIP_STYLE } from "./figureConstants"
 
 const W = 1100
-const H = 530
+const H = 560
 const MARGIN = { top: 20, right: 30, bottom: 40, left: 50 }
 const LANE_YS = [100, 250, 400]
 const AXIS_Y = 480
@@ -188,6 +188,37 @@ const MotorCortexTimeline = () => {
             </g>
           )
         })}
+
+        {/* Legend */}
+        {breakpoint !== "narrow" && (
+          <g>
+            {[
+              { color: COLORS.encoding, label: "Encoding" },
+              { color: COLORS.dynamics, label: "Dynamics" },
+              { color: COLORS.challenge, label: "Challenge" },
+            ].map((item, i) => {
+              const lx = MARGIN.left + i * 100
+              const ly = H - 18
+              return (
+                <g key={i}>
+                  <circle cx={lx} cy={ly} r={5} fill={item.color} fillOpacity={0.85} />
+                  <text x={lx + 10} y={ly + 4}
+                    style={{ fontFamily: "var(--font-sans)", fontSize: 10, fill: "rgba(0,0,0,0.5)" }}>
+                    {item.label}
+                  </text>
+                </g>
+              )
+            })}
+            <g>
+              <circle cx={MARGIN.left + 320} cy={H - 22} r={5} fill="rgba(0,0,0,0.25)" />
+              <circle cx={MARGIN.left + 320} cy={H - 10} r={10} fill="rgba(0,0,0,0.25)" />
+              <text x={MARGIN.left + 336} y={H - 12}
+                style={{ fontFamily: "var(--font-sans)", fontSize: 10, fill: "rgba(0,0,0,0.5)" }}>
+                Citation count
+              </text>
+            </g>
+          </g>
+        )}
 
         {/* Paper nodes with labels */}
         {papers.map(p => {

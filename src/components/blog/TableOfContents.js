@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 
 export default function TableOfContents({ items }) {
   const [activeId, setActiveId] = useState(null)
+  const [dodgeShift, setDodgeShift] = useState(0)
   const observerRef = useRef(null)
+  const tocRef = useRef(null)
+  const rafRef = useRef(null)
 
   useEffect(() => {
     const headings = items
@@ -32,6 +35,62 @@ export default function TableOfContents({ items }) {
     }
   }, [items])
 
+  const checkOverlap = useCallback(() => {
+    const toc = tocRef.current
+    if (!toc) return
+
+    // Use the parent .blog-toc-wrapper as stable horizontal reference
+    // (it never transforms, so its rect is always the base position)
+    const wrapper = toc.closest(".blog-toc-wrapper")
+    if (!wrapper) return
+
+    const wrapperRect = wrapper.getBoundingClientRect()
+    const tocRect = toc.getBoundingClientRect()
+
+    const figures = document.querySelectorAll(
+      ".blog-figure--wide, .l-page, .l-screen"
+    )
+
+    let shift = 0
+    figures.forEach(fig => {
+      const figRect = fig.getBoundingClientRect()
+      // Vertical overlap (translateX doesn't affect y)
+      if (figRect.top < tocRect.bottom + 20 && figRect.bottom > tocRect.top - 20) {
+        // Horizontal: wrapper.right is the TOC's untransformed right edge
+        // Only dodge if overlap is significant (>40px), not just from centering margins
+        if (figRect.left < wrapperRect.right) {
+          const overlap = wrapperRect.right - figRect.left
+          if (overlap > 40) {
+            shift = Math.max(shift, overlap + 16)
+          }
+        }
+      }
+    })
+
+    const maxShift = Math.max(0, wrapperRect.left - 8)
+    shift = Math.min(shift, maxShift)
+
+    setDodgeShift(shift)
+  }, [])
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (rafRef.current) return
+      rafRef.current = requestAnimationFrame(() => {
+        checkOverlap()
+        rafRef.current = null
+      })
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true })
+    checkOverlap()
+
+    return () => {
+      window.removeEventListener("scroll", onScroll)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
+  }, [checkOverlap])
+
   const handleClick = (e, id) => {
     e.preventDefault()
     const el = document.getElementById(id)
@@ -41,7 +100,12 @@ export default function TableOfContents({ items }) {
   }
 
   return (
-    <nav className="blog-toc" aria-label="Table of contents">
+    <nav
+      ref={tocRef}
+      className="blog-toc"
+      style={dodgeShift > 0 ? { transform: `translateX(-${dodgeShift}px)` } : undefined}
+      aria-label="Table of contents"
+    >
       <ul className="blog-toc__list">
         {items.map(item => (
           <li key={item.id} className="blog-toc__item">

@@ -1,9 +1,9 @@
 /* Blog post — Distill.pub inspired layout
  *
- * Grid columns:
- *   [screen] [page] [body ─── 680px ───] [gap 40px] [gutter 250px] [page] [screen]
+ * Grid columns (centered):
+ *   [screen] [left-margin 290px] [body ─── 680px ───] [gap 40px] [gutter 250px] [screen]
  *
- * The article element IS the grid container.
+ * The left margin mirrors gap+gutter so body text is centered on the page.
  * Header and footer sit in the body column.
  * Body wrapper spans body+gap+gutter so float sidenotes work inline.
  * Figures can break out via width classes (l-body-outset, l-page, l-screen).
@@ -14,13 +14,13 @@
 .blog-post {
   display: grid;
   grid-template-columns:
-    [screen-start] 1fr
-    [page-start] minmax(24px, 60px)
+    [screen-start] minmax(24px, 1fr)
+    [page-start] minmax(0, 290px)
     [body-start] minmax(0, 680px)
     [body-end] 40px
     [gutter-start] minmax(0, 250px)
-    [gutter-end page-end] minmax(24px, 60px)
-    1fr [screen-end];
+    [gutter-end page-end]
+    minmax(24px, 1fr) [screen-end];
   width: 100vw;
   margin-left: calc(-50vw + 50%);
   overflow: visible;
@@ -44,6 +44,7 @@
 .blog-toc {
   position: sticky;
   top: 2rem;
+  transition: transform 0.4s ease;
 }
 
 .blog-toc__list {
@@ -289,6 +290,14 @@
 .blog-figure {
   margin: 2.5rem 0;
   max-width: 780px;
+  /* Center on 680px body text, not the 970px body+gutter container */
+  margin-left: calc((680px - min(780px, 100%)) / 2);
+}
+
+/* Wider figures — extend symmetrically beyond body text */
+.blog-figure--wide {
+  max-width: 1050px;
+  margin-left: calc((680px - min(1050px, 100%)) / 2);
 }
 
 .blog-figure__caption {
@@ -489,7 +498,7 @@
 /* ── Footer ── */
 
 .blog-post__footer-sep {
-  grid-column: body / gutter-end;
+  grid-column: body;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   margin-top: 3rem;
 }
@@ -828,6 +837,12 @@
 
   .sidenote-checkbox:checked + .sidenote {
     display: block;
+  }
+
+  .blog-figure,
+  .blog-figure--wide {
+    margin-left: 0;
+    max-width: 100%;
   }
 
   .l-body-outset {
