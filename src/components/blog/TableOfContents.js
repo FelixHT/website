@@ -48,7 +48,7 @@ export default function TableOfContents({ items }) {
     const tocRect = toc.getBoundingClientRect()
 
     const figures = document.querySelectorAll(
-      ".blog-figure--wide, .l-page, .l-screen"
+      ".blog-figure--wide, .l-body-outset, .l-page, .l-screen"
     )
 
     let shift = 0
