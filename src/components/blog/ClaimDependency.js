@@ -39,8 +39,8 @@ const NODES = [
     body:"Soft normalization\nof firing rates",
     sens:false },
   { id:"kuz", type:"flag", depth:3.5, parent:"pp_kern",
-    title:"SENSITIVITY FLAG (Kuzmina 2024)",
-    body:"Kernel 10 vs 20 ms qualitatively\nchanges rotational detection",
+    title:"SENSITIVITY (Elsayed & Cunningham '17)",
+    body:"Temporal autocorrelations from\nsmoothing produce spurious rotations",
     sens:false, isFlag:true },
   { id:"ds_russ", type:"downstream", depth:4, parent:"claim",
     title:"Russo et al. 2018 (Neuron)",
@@ -141,7 +141,7 @@ function computeLayout(nodes) {
     const row = NODE_ROW[n.id]
     if (col === undefined || row === undefined) return
     const count = colCounts[col]
-    const w = col === 3 ? CLAIM_W : NODE_W
+    const w = col === 3 ? CLAIM_W : n.id === "kuz" ? 220 : NODE_W
     const totalH = count * NODE_H + (count - 1) * NODE_GAP
     const startY = HEADER_H + (availH - totalH) / 2
     positions[n.id] = { x: COL_X[col], y: startY + row * (NODE_H + NODE_GAP), w, h: NODE_H }
