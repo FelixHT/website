@@ -220,7 +220,7 @@ const IndexPage = () => {
             />
             <ArticleCard
               title="Neuroscience Keeps Solving the Same Problems Twice"
-              author="Essay"
+              author="Metascience"
               description="A structured claim-dependency layer for science, and an experiment to test whether it accelerates convergence."
               tag="March 2026"
               link="/blog/lean-for-science/"
