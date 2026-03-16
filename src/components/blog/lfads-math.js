@@ -5,7 +5,7 @@
 // Imports shared linear algebra from cca-math.js and seeded PRNG from psid-math.js.
 // ---------------------------------------------------------------------------
 
-import { zeros, matMul, matT } from "./cca-math"
+import { zeros } from "./cca-math"
 import { mulberry32, seededRandn } from "./psid-math"
 
 // ===================== Poisson Sampling =====================================
