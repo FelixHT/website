@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect, useRef } from "react"
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { scaleLinear } from "d3-scale"
+import gsap from "gsap"
 import { loadDemoModel } from "./lfads-math"
 import modelJson from "./lfads-demo-model.json"
 import { BTN_BASE, btnActive } from "./figureConstants"
@@ -19,10 +20,53 @@ const COLOR_RECON = "#4A7C6F"
 const COLOR_KL = "#8B4A3A"
 const KL_WARMUP_END = 25
 
+/* ── Helper: interpolate path between two point arrays ── */
+function buildMorphedPath(fromPts, toPts, t, sx, sy) {
+  const parts = []
+  const len = Math.min(fromPts.length, toPts.length)
+  for (let i = 0; i < len; i++) {
+    const x = sx(fromPts[i][0] * (1 - t) + toPts[i][0] * t)
+    const y = sy(fromPts[i][1] * (1 - t) + toPts[i][1] * t)
+    parts.push(`${i === 0 ? "M" : "L"}${x},${y}`)
+  }
+  return parts.join(" ")
+}
+
+/* ── Helper: build a single neuron's rate path ── */
+function buildRatePath(rateMatrix, neuronIdx, sx, sy) {
+  const parts = []
+  for (let t = 0; t < rateMatrix.length; t++) {
+    const x = sx(t)
+    const y = sy(rateMatrix[t][neuronIdx])
+    parts.push(`${t === 0 ? "M" : "L"}${x},${y}`)
+  }
+  return parts.join(" ")
+}
+
 export default function TrainingDynamicsExplorer() {
   const [snapIdx, setSnapIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   const timerRef = useRef(null)
+
+  // GSAP refs
+  const epochMarkerRef = useRef(null)
+  const warmupRectRef = useRef(null)
+  const playTlRef = useRef(null)
+  const snapIdxRef = useRef(0)
+  const svgRef = useRef(null)
+
+  // Loss curve refs
+  const elboPathRef = useRef(null)
+  const reconPathRef = useRef(null)
+  const klPathRef = useRef(null)
+  const elboDotRef = useRef(null)
+  const reconDotRef = useRef(null)
+  const klDotRef = useRef(null)
+
+  // Keep snapIdxRef in sync
+  useEffect(() => {
+    snapIdxRef.current = snapIdx
+  }, [snapIdx])
 
   const model = useMemo(() => loadDemoModel(modelJson.default), [])
   const snapshots = model.epochSnapshots
@@ -34,14 +78,12 @@ export default function TrainingDynamicsExplorer() {
     const recons = snapshots.map(s => s.recon)
     const kls = snapshots.map(s => s.kl)
 
-    // Interpolate for smooth line from epoch 0 to 100
     const nPts = 101
     const elboLine = []
     const reconLine = []
     const klLine = []
 
     for (let e = 0; e < nPts; e++) {
-      // Find which segment we're in
       let segIdx = 0
       for (let i = 0; i < epochs.length - 1; i++) {
         if (e >= epochs[i]) segIdx = i
@@ -59,24 +101,6 @@ export default function TrainingDynamicsExplorer() {
   }, [snapshots])
 
   const currentEpoch = snapshots[snapIdx].epoch
-
-  // Auto-advance logic
-  useEffect(() => {
-    if (playing) {
-      timerRef.current = setInterval(() => {
-        setSnapIdx(prev => {
-          if (prev >= snapshots.length - 1) {
-            setPlaying(false)
-            return prev
-          }
-          return prev + 1
-        })
-      }, 1200)
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [playing, snapshots.length])
 
   // === Left panel: Loss curves ===
   const leftPlotW = LEFT_W - MARGIN.left - 10
@@ -106,12 +130,9 @@ export default function TrainingDynamicsExplorer() {
   const midPlotW = MID_W - 20
   const midPlotH = H - MARGIN.top - MARGIN.bottom
 
-  // sampleLatents: [trial][time][dim] — 2 trials, 100 timesteps, 3 dims
-  // We plot dims 0 and 1
   const latentData = snapshots[snapIdx].sampleLatents
 
   const { latSx, latSy } = useMemo(() => {
-    // Compute extent across all snapshots for consistent scaling
     let minX = Infinity, maxX = -Infinity
     let minY = Infinity, maxY = -Infinity
     for (const snap of snapshots) {
@@ -139,11 +160,9 @@ export default function TrainingDynamicsExplorer() {
   const RATE_NEURONS = [0, 1, 2]
   const RATE_COLORS = ["#4A7C6F", "#D4783C", "#4A90D9"]
 
-  // sampleRates: [trial][time] -> each time is array of nNeurons rates
   const ratesData = snapshots[snapIdx].sampleRates
 
   const { rateSx, rateSy } = useMemo(() => {
-    // Extent across all snapshots
     let maxR = 0
     for (const snap of snapshots) {
       for (const trial of snap.sampleRates) {
@@ -154,18 +173,310 @@ export default function TrainingDynamicsExplorer() {
         }
       }
     }
-    const T = ratesData[0].length
+    const T = snapshots[0].sampleRates[0].length
     return {
       rateSx: scaleLinear().domain([0, T - 1]).range([0, rightPlotW]),
       rateSy: scaleLinear().domain([0, maxR * 1.15 || 5]).range([rightPlotH, 0]),
     }
-  }, [snapshots, ratesData, rightPlotW, rightPlotH])
+  }, [snapshots, rightPlotW, rightPlotH])
 
   const TRIAL_COLORS = ["#4A90D9", "#c0503a"]
+
+  // === Loss curve dash setup: compute total path lengths on mount ===
+  const lossPathLengthsRef = useRef({ elbo: 0, recon: 0, kl: 0 })
+
+  useEffect(() => {
+    // Once SVG is mounted, measure path lengths and set initial dashoffset
+    const elboEl = elboPathRef.current
+    const reconEl = reconPathRef.current
+    const klEl = klPathRef.current
+    if (!elboEl || !reconEl || !klEl) return
+
+    const elboLen = elboEl.getTotalLength()
+    const reconLen = reconEl.getTotalLength()
+    const klLen = klEl.getTotalLength()
+    lossPathLengthsRef.current = { elbo: elboLen, recon: reconLen, kl: klLen }
+
+    // Fraction of the curve to reveal based on current epoch
+    const frac = currentEpoch / 100
+    gsap.set(elboEl, {
+      attr: { strokeDasharray: elboLen, strokeDashoffset: elboLen * (1 - frac) },
+    })
+    gsap.set(reconEl, {
+      attr: { strokeDasharray: reconLen, strokeDashoffset: reconLen * (1 - frac) },
+    })
+    gsap.set(klEl, {
+      attr: { strokeDasharray: klLen, strokeDashoffset: klLen * (1 - frac) },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // === Animate to a specific snapshot index (slider drag) ===
+  const animateToSnap = useCallback(
+    (toIdx) => {
+      const svg = svgRef.current
+      if (!svg) return
+
+      const fromIdx = snapIdxRef.current
+      const toSnap = snapshots[toIdx]
+      const fromSnap = snapshots[fromIdx]
+      const toEpoch = toSnap.epoch
+      const fromEpoch = fromSnap.epoch
+
+      // Trajectory morph
+      const trajEls = svg.querySelectorAll(".td-traj")
+      const rateEls = svg.querySelectorAll(".td-rate")
+
+      const proxy = { t: 0 }
+      gsap.to(proxy, {
+        t: 1,
+        duration: 0.3,
+        ease: "power2.out",
+        onUpdate() {
+          const t = proxy.t
+          const interpEpoch = fromEpoch + (toEpoch - fromEpoch) * t
+
+          // Morph latent trajectories
+          trajEls.forEach(el => {
+            const trIdx = Number(el.dataset.trial)
+            const fromPts = fromSnap.sampleLatents[trIdx]
+            const toPts = toSnap.sampleLatents[trIdx]
+            el.setAttribute("d", buildMorphedPath(fromPts, toPts, t, latSx, latSy))
+          })
+
+          // Morph start markers
+          const startMarkers = svg.querySelectorAll(".td-traj-start")
+          startMarkers.forEach(el => {
+            const trIdx = Number(el.dataset.trial)
+            const fromPt = fromSnap.sampleLatents[trIdx][0]
+            const toPt = toSnap.sampleLatents[trIdx][0]
+            el.setAttribute("cx", latSx(fromPt[0] * (1 - t) + toPt[0] * t))
+            el.setAttribute("cy", latSy(fromPt[1] * (1 - t) + toPt[1] * t))
+          })
+
+          // Crossfade rate curves
+          rateEls.forEach(el => {
+            const nIdx = Number(el.dataset.neuron)
+            const fromRates = fromSnap.sampleRates[0]
+            const toRates = toSnap.sampleRates[0]
+            // Morph by interpolating the underlying data
+            const parts = []
+            const len = Math.min(fromRates.length, toRates.length)
+            for (let i = 0; i < len; i++) {
+              const val = fromRates[i][nIdx] * (1 - t) + toRates[i][nIdx] * t
+              parts.push(`${i === 0 ? "M" : "L"}${rateSx(i)},${rateSy(val)}`)
+            }
+            el.setAttribute("d", parts.join(" "))
+          })
+
+          // Epoch marker
+          if (epochMarkerRef.current) {
+            epochMarkerRef.current.setAttribute("x1", lossSx(interpEpoch))
+            epochMarkerRef.current.setAttribute("x2", lossSx(interpEpoch))
+          }
+
+          // Loss dots
+          const roundedEpoch = Math.round(interpEpoch)
+          const clampedEpoch = Math.max(0, Math.min(100, roundedEpoch))
+          if (elboDotRef.current) {
+            elboDotRef.current.setAttribute("cx", lossSx(interpEpoch))
+            elboDotRef.current.setAttribute("cy", lossSy(lossCurves.elboLine[clampedEpoch]))
+          }
+          if (reconDotRef.current) {
+            reconDotRef.current.setAttribute("cx", lossSx(interpEpoch))
+            reconDotRef.current.setAttribute("cy", lossSy(lossCurves.reconLine[clampedEpoch]))
+          }
+          if (klDotRef.current) {
+            klDotRef.current.setAttribute("cx", lossSx(interpEpoch))
+            klDotRef.current.setAttribute("cy", lossSy(lossCurves.klLine[clampedEpoch]))
+          }
+
+          // Loss curve reveal via strokeDashoffset
+          const frac = interpEpoch / 100
+          const lens = lossPathLengthsRef.current
+          if (elboPathRef.current)
+            elboPathRef.current.setAttribute("stroke-dashoffset", lens.elbo * (1 - frac))
+          if (reconPathRef.current)
+            reconPathRef.current.setAttribute("stroke-dashoffset", lens.recon * (1 - frac))
+          if (klPathRef.current)
+            klPathRef.current.setAttribute("stroke-dashoffset", lens.kl * (1 - frac))
+
+          // KL warmup shading
+          if (warmupRectRef.current) {
+            const warmupEnd = Math.min(interpEpoch, KL_WARMUP_END)
+            warmupRectRef.current.setAttribute("width", lossSx(warmupEnd) - lossSx(0))
+          }
+        },
+        onComplete() {
+          snapIdxRef.current = toIdx
+        },
+      })
+
+      setSnapIdx(toIdx)
+    },
+    [snapshots, latSx, latSy, rateSx, rateSy, lossSx, lossSy, lossCurves],
+  )
+
+  // === Play mode: GSAP timeline ===
+  useEffect(() => {
+    if (!playing) {
+      if (playTlRef.current) {
+        playTlRef.current.kill()
+        playTlRef.current = null
+      }
+      return
+    }
+
+    const svg = svgRef.current
+    if (!svg) return
+
+    let startIdx = snapIdxRef.current
+    if (startIdx >= snapshots.length - 1) {
+      startIdx = 0
+      snapIdxRef.current = 0
+      setSnapIdx(0)
+    }
+
+    const masterTl = gsap.timeline({
+      onComplete() {
+        setPlaying(false)
+        playTlRef.current = null
+      },
+    })
+    playTlRef.current = masterTl
+
+    for (let step = startIdx; step < snapshots.length - 1; step++) {
+      const fromIdx = step
+      const toIdx = step + 1
+      const fromSnap = snapshots[fromIdx]
+      const toSnap = snapshots[toIdx]
+      const fromEpoch = fromSnap.epoch
+      const toEpoch = toSnap.epoch
+
+      const proxy = { t: 0 }
+      const stepLabel = `step${step}`
+
+      // 400ms pause between transitions (skip for first step)
+      if (step > startIdx) {
+        masterTl.to({}, { duration: 0.4 }, `>${stepLabel}pause`)
+      }
+
+      masterTl.to(proxy, {
+        t: 1,
+        duration: 0.8,
+        ease: "power2.inOut",
+        onStart() {
+          setSnapIdx(fromIdx)
+          snapIdxRef.current = fromIdx
+        },
+        onUpdate() {
+          const t = proxy.t
+          const interpEpoch = fromEpoch + (toEpoch - fromEpoch) * t
+
+          // 1. Morph latent trajectories
+          const trajEls = svg.querySelectorAll(".td-traj")
+          trajEls.forEach(el => {
+            const trIdx = Number(el.dataset.trial)
+            const fromPts = fromSnap.sampleLatents[trIdx]
+            const toPts = toSnap.sampleLatents[trIdx]
+            el.setAttribute("d", buildMorphedPath(fromPts, toPts, t, latSx, latSy))
+          })
+
+          // Morph start markers
+          const startMarkers = svg.querySelectorAll(".td-traj-start")
+          startMarkers.forEach(el => {
+            const trIdx = Number(el.dataset.trial)
+            const fromPt = fromSnap.sampleLatents[trIdx][0]
+            const toPt = toSnap.sampleLatents[trIdx][0]
+            el.setAttribute("cx", latSx(fromPt[0] * (1 - t) + toPt[0] * t))
+            el.setAttribute("cy", latSy(fromPt[1] * (1 - t) + toPt[1] * t))
+          })
+
+          // 2. Rate curves crossfade (staggered per neuron)
+          const rateEls = svg.querySelectorAll(".td-rate")
+          rateEls.forEach(el => {
+            const nIdx = Number(el.dataset.neuron)
+            // Stagger: each neuron starts 50ms later -> normalized offset
+            const staggerDelay = (nIdx * 0.05) / 0.8 // 50ms stagger within 800ms
+            const adjustedT = Math.max(0, Math.min(1, (t - staggerDelay * 0.25) / (1 - staggerDelay * 0.25)))
+
+            // Crossfade: morph from 0.25 to 0.75 of adjusted t is opacity ramp
+            const fadeT = adjustedT < 0.25
+              ? 1 - (adjustedT / 0.25) * 0.7  // fade current down to 0.3
+              : 0.3 + ((adjustedT - 0.25) / 0.75) * 0.7  // fade new up to 1.0
+
+            const fromRates = fromSnap.sampleRates[0]
+            const toRates = toSnap.sampleRates[0]
+            const len = Math.min(fromRates.length, toRates.length)
+            const parts = []
+            for (let i = 0; i < len; i++) {
+              const val = fromRates[i][nIdx] * (1 - adjustedT) + toRates[i][nIdx] * adjustedT
+              parts.push(`${i === 0 ? "M" : "L"}${rateSx(i)},${rateSy(val)}`)
+            }
+            el.setAttribute("d", parts.join(" "))
+            el.setAttribute("opacity", fadeT)
+          })
+
+          // 3. Epoch marker slides along x-axis
+          if (epochMarkerRef.current) {
+            epochMarkerRef.current.setAttribute("x1", lossSx(interpEpoch))
+            epochMarkerRef.current.setAttribute("x2", lossSx(interpEpoch))
+          }
+
+          // 4. Loss curve dots follow epoch marker
+          const roundedEpoch = Math.round(interpEpoch)
+          const clampedEpoch = Math.max(0, Math.min(100, roundedEpoch))
+          if (elboDotRef.current) {
+            elboDotRef.current.setAttribute("cx", lossSx(interpEpoch))
+            elboDotRef.current.setAttribute("cy", lossSy(lossCurves.elboLine[clampedEpoch]))
+          }
+          if (reconDotRef.current) {
+            reconDotRef.current.setAttribute("cx", lossSx(interpEpoch))
+            reconDotRef.current.setAttribute("cy", lossSy(lossCurves.reconLine[clampedEpoch]))
+          }
+          if (klDotRef.current) {
+            klDotRef.current.setAttribute("cx", lossSx(interpEpoch))
+            klDotRef.current.setAttribute("cy", lossSy(lossCurves.klLine[clampedEpoch]))
+          }
+
+          // 5. Loss curves extend via strokeDashoffset
+          const frac = interpEpoch / 100
+          const lens = lossPathLengthsRef.current
+          if (elboPathRef.current)
+            elboPathRef.current.setAttribute("stroke-dashoffset", lens.elbo * (1 - frac))
+          if (reconPathRef.current)
+            reconPathRef.current.setAttribute("stroke-dashoffset", lens.recon * (1 - frac))
+          if (klPathRef.current)
+            klPathRef.current.setAttribute("stroke-dashoffset", lens.kl * (1 - frac))
+
+          // 6. KL warmup shading follows epoch marker
+          if (warmupRectRef.current) {
+            const warmupEnd = Math.min(interpEpoch, KL_WARMUP_END)
+            warmupRectRef.current.setAttribute("width", lossSx(warmupEnd) - lossSx(0))
+          }
+        },
+        onComplete() {
+          snapIdxRef.current = toIdx
+          setSnapIdx(toIdx)
+          // Reset rate opacities to full after crossfade
+          const rateEls = svg.querySelectorAll(".td-rate")
+          rateEls.forEach(el => el.setAttribute("opacity", "0.85"))
+        },
+      }, step === startIdx ? 0 : `>`)
+    }
+
+    return () => {
+      if (playTlRef.current) {
+        playTlRef.current.kill()
+        playTlRef.current = null
+      }
+    }
+  }, [playing, snapshots, latSx, latSy, rateSx, rateSy, lossSx, lossSy, lossCurves])
 
   return (
     <div style={{ fontFamily: FONT }}>
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         style={{ display: "block", width: "100%", height: "auto" }}
       >
@@ -190,9 +501,10 @@ export default function TrainingDynamicsExplorer() {
 
           {/* KL warmup shading */}
           <rect
+            ref={warmupRectRef}
             x={lossSx(0)}
             y={0}
-            width={lossSx(KL_WARMUP_END) - lossSx(0)}
+            width={lossSx(Math.min(currentEpoch, KL_WARMUP_END)) - lossSx(0)}
             height={leftPlotH}
             fill={COLOR_KL}
             opacity={0.06}
@@ -233,6 +545,9 @@ export default function TrainingDynamicsExplorer() {
 
           {/* ELBO line (blue solid) */}
           <path
+            ref={elboPathRef}
+            className="td-loss"
+            data-metric="elbo"
             d={buildLinePath(lossCurves.elboLine, lossSx, lossSy)}
             fill="none"
             stroke={COLOR_ELBO}
@@ -241,6 +556,9 @@ export default function TrainingDynamicsExplorer() {
 
           {/* Reconstruction line (teal dashed) */}
           <path
+            ref={reconPathRef}
+            className="td-loss"
+            data-metric="recon"
             d={buildLinePath(lossCurves.reconLine, lossSx, lossSy)}
             fill="none"
             stroke={COLOR_RECON}
@@ -250,6 +568,9 @@ export default function TrainingDynamicsExplorer() {
 
           {/* KL line (red-brown dotted) */}
           <path
+            ref={klPathRef}
+            className="td-loss"
+            data-metric="kl"
             d={buildLinePath(lossCurves.klLine, lossSx, lossSy)}
             fill="none"
             stroke={COLOR_KL}
@@ -259,6 +580,7 @@ export default function TrainingDynamicsExplorer() {
 
           {/* Vertical epoch marker */}
           <line
+            ref={epochMarkerRef}
             x1={lossSx(currentEpoch)} y1={0}
             x2={lossSx(currentEpoch)} y2={leftPlotH}
             stroke="#333"
@@ -267,16 +589,19 @@ export default function TrainingDynamicsExplorer() {
             opacity={0.5}
           />
           <circle
+            ref={elboDotRef}
             cx={lossSx(currentEpoch)}
             cy={lossSy(lossCurves.elboLine[currentEpoch])}
             r={3} fill={COLOR_ELBO}
           />
           <circle
+            ref={reconDotRef}
             cx={lossSx(currentEpoch)}
             cy={lossSy(lossCurves.reconLine[currentEpoch])}
             r={3} fill={COLOR_RECON}
           />
           <circle
+            ref={klDotRef}
             cx={lossSx(currentEpoch)}
             cy={lossSy(lossCurves.klLine[currentEpoch])}
             r={3} fill={COLOR_KL}
@@ -335,6 +660,8 @@ export default function TrainingDynamicsExplorer() {
             return (
               <path
                 key={trIdx}
+                className="td-traj"
+                data-trial={trIdx}
                 d={path}
                 fill="none"
                 stroke={TRIAL_COLORS[trIdx % TRIAL_COLORS.length]}
@@ -348,6 +675,8 @@ export default function TrainingDynamicsExplorer() {
           {latentData.map((trial, trIdx) => (
             <circle
               key={trIdx}
+              className="td-traj-start"
+              data-trial={trIdx}
               cx={latSx(trial[0][0])}
               cy={latSy(trial[0][1])}
               r={3}
@@ -394,6 +723,8 @@ export default function TrainingDynamicsExplorer() {
             return (
               <path
                 key={nIdx}
+                className="td-rate"
+                data-neuron={nIdx}
                 d={path}
                 fill="none"
                 stroke={RATE_COLORS[row]}
@@ -468,8 +799,9 @@ export default function TrainingDynamicsExplorer() {
             step={1}
             value={snapIdx}
             onChange={e => {
-              setSnapIdx(Number(e.target.value))
+              const newIdx = Number(e.target.value)
               setPlaying(false)
+              animateToSnap(newIdx)
             }}
             style={{ width: 260 }}
           />
