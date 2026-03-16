@@ -444,6 +444,217 @@ export function computeGradientNorms(states, params) {
   return gradNorms
 }
 
+// ===================== Variational Inference Utilities =======================
+
+/**
+ * KL divergence: KL(N(mu, exp(logvar)) || N(0,1))
+ * = 0.5 * sum(exp(logvar) + mu^2 - 1 - logvar)
+ * mu, logvar: d-vectors (plain arrays). Returns scalar.
+ */
+export function gaussianKL(mu, logvar) {
+  let kl = 0
+  for (let i = 0; i < mu.length; i++) {
+    kl += Math.exp(logvar[i]) + mu[i] * mu[i] - 1 - logvar[i]
+  }
+  return 0.5 * kl
+}
+
+/**
+ * Poisson log-likelihood.
+ * sum over all entries: spikes[i]*logRates[i] - exp(logRates[i]) - log(spikes[i]!)
+ * Uses Stirling approximation for log(n!): n*log(n) - n + 0.5*log(2*pi*n) for n >= 2.
+ * spikes, logRates: T x n matrices (array of arrays). Returns scalar.
+ */
+export function poissonLogLik(spikes, logRates) {
+  let ll = 0
+  for (let t = 0; t < spikes.length; t++) {
+    for (let n = 0; n < spikes[t].length; n++) {
+      const k = spikes[t][n]
+      const lr = logRates[t][n]
+      ll += k * lr - Math.exp(lr) - logFactorial(k)
+    }
+  }
+  return ll
+}
+
+/**
+ * Gaussian log-likelihood.
+ * sum over all entries: -0.5*((y-mu)/sigma)^2 - log(sigma) - 0.5*log(2*pi)
+ * y, mu: T x n matrices, sigma: scalar. Returns scalar.
+ */
+export function gaussianLogLik(y, mu, sigma) {
+  const logSigma = Math.log(sigma)
+  const logConst = 0.5 * Math.log(2 * Math.PI)
+  let ll = 0
+  for (let t = 0; t < y.length; t++) {
+    for (let n = 0; n < y[t].length; n++) {
+      const diff = (y[t][n] - mu[t][n]) / sigma
+      ll += -0.5 * diff * diff - logSigma - logConst
+    }
+  }
+  return ll
+}
+
+/**
+ * Compute the evidence lower bound (ELBO).
+ * Returns reconLogLik - beta * kl
+ */
+export function computeELBO(reconLogLik, kl, beta) {
+  return reconLogLik - beta * kl
+}
+
+// ===================== Demo Model Functions ==================================
+
+/**
+ * Parse a JSON object into typed model structures.
+ * Returns { generator, encoder, controller, readout, epochSnapshots }
+ */
+export function loadDemoModel(modelJson) {
+  const g = modelJson.generator
+  const e = modelJson.encoder
+  const c = modelJson.controller
+  const r = modelJson.readout
+
+  return {
+    generator: {
+      Wr: g.Wr,
+      Wu: g.Wu,
+      Wc: g.Wc,
+      br: g.br,
+      bu: g.bu,
+      bc: g.bc,
+    },
+    encoder: {
+      fwd: { Wh: e.fwd.Wh, Wx: e.fwd.Wx, b: e.fwd.b },
+      bwd: { Wh: e.bwd.Wh, Wx: e.bwd.Wx, b: e.bwd.b },
+      muW: e.muW,
+      muB: e.muB,
+      logvarW: e.logvarW,
+      logvarB: e.logvarB,
+    },
+    controller: {
+      Wr: c.Wr,
+      Wu: c.Wu,
+      Wc: c.Wc,
+      br: c.br,
+      bu: c.bu,
+      bc: c.bc,
+    },
+    readout: {
+      W: r.W,
+      b: r.b,
+    },
+    epochSnapshots: modelJson.epochSnapshots || [],
+  }
+}
+
+/**
+ * Run generator GRU from initial condition for T steps with zero input.
+ * ic: d-vector initial condition for generator GRU
+ * model: parsed model from loadDemoModel
+ * T: number of timesteps
+ *
+ * Returns { states: T x d, factors: T x nFactors, rates: T x nNeurons }
+ */
+export function generateFromIC(ic, model, T) {
+  const gen = model.generator
+  const ro = model.readout
+  const d = ic.length
+  const nNeurons = ro.W.length
+  const nFactors = ro.W[0].length
+  // Input dimension for GRU: Wr is d x (d + p), so p = Wr[0].length - d
+  const p = gen.Wr[0].length - d
+  const zeroInput = new Float64Array(p)
+
+  const states = zeros(T, d)
+  const factors = zeros(T, nFactors)
+  const rates = zeros(T, nNeurons)
+
+  let h = new Float64Array(d)
+  for (let i = 0; i < d; i++) h[i] = ic[i]
+
+  for (let t = 0; t < T; t++) {
+    const { h_new } = gruStep(h, zeroInput, gen.Wr, gen.Wu, gen.Wc, gen.br, gen.bu, gen.bc)
+    for (let i = 0; i < d; i++) states[t][i] = h_new[i]
+
+    // Factors = generator hidden state (d = nFactors in this architecture)
+    // logRates = readout.W * factors + readout.b, rates = exp(logRates)
+    for (let k = 0; k < nFactors; k++) {
+      factors[t][k] = h_new[k]
+    }
+
+    // rates = exp(W * h + b), W is nNeurons x d
+    for (let n = 0; n < nNeurons; n++) {
+      let logRate = ro.b[n]
+      for (let k = 0; k < d; k++) {
+        logRate += ro.W[n][k] * h_new[k]
+      }
+      rates[t][n] = Math.exp(logRate)
+    }
+
+    h = h_new
+  }
+
+  return { states, factors, rates }
+}
+
+/**
+ * Run full LFADS inference on a single trial.
+ * spikes: T x nNeurons matrix
+ * model: parsed model from loadDemoModel
+ *
+ * Returns { ic_mu, ic_logvar, states: T x d, rates: T x nNeurons }
+ */
+export function inferSingleTrial(spikes, model) {
+  const T = spikes.length
+  const enc = model.encoder
+  const encDim = enc.fwd.Wh.length // encoder hidden dimension
+
+  // 1. Run bidirectional encoder RNN over spikes
+  // Forward pass
+  let h_fwd = new Float64Array(encDim)
+  for (let t = 0; t < T; t++) {
+    const { h_new } = rnnStep(h_fwd, spikes[t], enc.fwd.Wh, enc.fwd.Wx, enc.fwd.b)
+    h_fwd = h_new
+  }
+
+  // Backward pass
+  let h_bwd = new Float64Array(encDim)
+  for (let t = T - 1; t >= 0; t--) {
+    const { h_new } = rnnStep(h_bwd, spikes[t], enc.bwd.Wh, enc.bwd.Wx, enc.bwd.b)
+    h_bwd = h_new
+  }
+
+  // Concatenate final states: e = [h_fwd_T, h_bwd_0]
+  const concatDim = 2 * encDim
+  const e = new Float64Array(concatDim)
+  for (let i = 0; i < encDim; i++) e[i] = h_fwd[i]
+  for (let i = 0; i < encDim; i++) e[encDim + i] = h_bwd[i]
+
+  // 2. IC distribution: mu = muW*e + muB, logvar = logvarW*e + logvarB
+  const latentDim = enc.muW.length
+  const ic_mu = new Float64Array(latentDim)
+  const ic_logvar = new Float64Array(latentDim)
+  for (let i = 0; i < latentDim; i++) {
+    let mu_i = enc.muB[i]
+    let lv_i = enc.logvarB[i]
+    for (let j = 0; j < concatDim; j++) {
+      mu_i += enc.muW[i][j] * e[j]
+      lv_i += enc.logvarW[i][j] * e[j]
+    }
+    ic_mu[i] = mu_i
+    ic_logvar[i] = lv_i
+  }
+
+  // 3. Sample (use mu for deterministic demo): ic = mu
+  const ic = Array.from(ic_mu)
+
+  // 4. Run generator from ic
+  const { states, rates } = generateFromIC(ic, model, T)
+
+  return { ic_mu: Array.from(ic_mu), ic_logvar: Array.from(ic_logvar), states, rates }
+}
+
 // ===================== Internal Helpers =====================================
 
 /**
@@ -453,4 +664,23 @@ function vecNormF64(v) {
   let s = 0
   for (let i = 0; i < v.length; i++) s += v[i] * v[i]
   return Math.sqrt(s)
+}
+
+/**
+ * Log-factorial using Stirling approximation for large n.
+ * For small n (0..20), uses a lookup table.
+ */
+const LOG_FACTORIAL_TABLE = (() => {
+  const table = new Float64Array(21)
+  table[0] = 0
+  for (let i = 1; i <= 20; i++) {
+    table[i] = table[i - 1] + Math.log(i)
+  }
+  return table
+})()
+
+function logFactorial(n) {
+  if (n <= 20) return LOG_FACTORIAL_TABLE[n]
+  // Stirling approximation: log(n!) ~ n*log(n) - n + 0.5*log(2*pi*n)
+  return n * Math.log(n) - n + 0.5 * Math.log(2 * Math.PI * n)
 }
