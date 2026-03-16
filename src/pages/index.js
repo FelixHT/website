@@ -219,6 +219,15 @@ const IndexPage = () => {
               headerBgColor="rgba(74, 144, 217, 0.12)"
             />
             <ArticleCard
+              title="Latent Factor Analysis via Dynamical Systems"
+              author="Dimensionality Reduction"
+              description="Inferring single-trial neural dynamics with a deep generative model, derived from scratch with interactive figures."
+              tag="March 2026"
+              link="/blog/lfads/"
+              borderColor="#7b68ae"
+              headerBgColor="rgba(123, 104, 174, 0.12)"
+            />
+            <ArticleCard
               title="Neuroscience Keeps Solving the Same Problems Twice"
               author="Metascience"
               description="A structured claim-dependency layer for science, and an experiment to test whether it accelerates convergence."
