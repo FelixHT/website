@@ -1,111 +1,107 @@
 import React, { useState, useMemo, useCallback } from "react"
 import { scaleLinear } from "d3-scale"
 import { schemeTableau10 } from "d3-scale-chromatic"
-import { generateReachingTask, inferSingleTrial, loadDemoModel } from "./lfads-math"
-import modelJson from "./lfads-demo-model.json"
+import { generateReachingTask } from "./lfads-math"
 
 const W = 800
-const H = 360
-const MARGIN = { top: 30, right: 20, bottom: 30, left: 20 }
+const H = 380
+const MARGIN = { top: 30, right: 10, bottom: 30, left: 30 }
 const PANEL_W = 230
-const GAP = 25
+const GAP = 20
 const PLOT_H = H - MARGIN.top - MARGIN.bottom
 const T = 100
 const N_NEURONS = 20
 const N_CONDITIONS = 8
 const N_TRIALS = 3
-const EXAMPLE_NEURONS = [0, 3, 7]
+// Show 3 conditions in raster for clarity (not all 8 overlaid)
+const RASTER_CONDITIONS = [0, 2, 5]
+const EXAMPLE_NEURONS = [1, 6, 14]
 
 function panelX(idx) {
   return MARGIN.left + idx * (PANEL_W + GAP)
 }
 
+// Simple Gaussian smoothing for "inferred rates" from spikes
+function smoothTimeSeries(values, sigma) {
+  const n = values.length
+  const out = new Float64Array(n)
+  const k = Math.ceil(sigma * 3)
+  for (let i = 0; i < n; i++) {
+    let sum = 0, wt = 0
+    for (let j = Math.max(0, i - k); j <= Math.min(n - 1, i + k); j++) {
+      const g = Math.exp(-0.5 * ((i - j) / sigma) ** 2)
+      sum += values[j] * g
+      wt += g
+    }
+    out[i] = sum / wt
+  }
+  return out
+}
+
 export default function LFADSTeaser() {
   const [seed, setSeed] = useState(1)
-
-  const model = useMemo(() => loadDemoModel(modelJson.default), [])
 
   const taskData = useMemo(
     () => generateReachingTask(N_CONDITIONS, N_TRIALS, N_NEURONS, seed),
     [seed]
   )
 
-  // Run inference on first trial of each condition
-  const inferred = useMemo(() => {
-    const results = []
-    for (let c = 0; c < N_CONDITIONS; c++) {
-      const trial = taskData.spikes[c][0]
-      const result = inferSingleTrial(trial, model)
-      results.push({ condition: c, trial: 0, ...result })
-    }
-    return results
-  }, [taskData, model])
-
-  // === Panel 1: Raster plot scales ===
+  // === Panel 1: Raster — show 3 conditions, each in its own vertical band ===
   const rasterSx = useMemo(
     () => scaleLinear().domain([0, T - 1]).range([0, PANEL_W]),
     []
   )
-  const rasterSy = useMemo(
-    () => scaleLinear().domain([-0.5, N_NEURONS - 0.5]).range([0, PLOT_H]),
-    []
-  )
+  const condBandH = PLOT_H / RASTER_CONDITIONS.length
+  const neuronStep = (condBandH - 6) / N_NEURONS
 
-  // === Panel 2: Latent trajectory scales ===
+  // === Panel 2: Latent trajectories — use ground-truth latents ===
   const { latSx, latSy } = useMemo(() => {
     let minX = Infinity, maxX = -Infinity
     let minY = Infinity, maxY = -Infinity
-    for (const inf of inferred) {
+    for (let c = 0; c < N_CONDITIONS; c++) {
+      const lat = taskData.latents[c][0] // first trial
       for (let t = 0; t < T; t++) {
-        const x = inf.states[t][0]
-        const y = inf.states[t][1]
+        const x = lat[t][0], y = lat[t][1]
         if (x < minX) minX = x
         if (x > maxX) maxX = x
         if (y < minY) minY = y
         if (y > maxY) maxY = y
       }
     }
-    const padX = (maxX - minX) * 0.1 || 1
-    const padY = (maxY - minY) * 0.1 || 1
+    const padX = (maxX - minX) * 0.12 || 1
+    const padY = (maxY - minY) * 0.12 || 1
     return {
       latSx: scaleLinear().domain([minX - padX, maxX + padX]).range([0, PANEL_W]),
       latSy: scaleLinear().domain([minY - padY, maxY + padY]).range([PLOT_H, 0]),
     }
-  }, [inferred])
+  }, [taskData])
 
-  // === Panel 3: Inferred rates scales ===
+  // === Panel 3: Rates — use ground-truth rates + smoothed spikes ===
   const ratesSx = useMemo(
     () => scaleLinear().domain([0, T - 1]).range([0, PANEL_W]),
     []
   )
 
-  const { ratesScales, spikeScales } = useMemo(() => {
-    const subH = (PLOT_H - 20) / EXAMPLE_NEURONS.length
-    const rScales = []
-    const sScales = []
-    for (const nIdx of EXAMPLE_NEURONS) {
-      let minR = Infinity, maxR = -Infinity
-      let maxS = 0
-      for (const inf of inferred) {
+  const neuronH = (PLOT_H - 10) / EXAMPLE_NEURONS.length
+
+  // Compute scales per example neuron across a few conditions
+  const rateScales = useMemo(() => {
+    const showConds = [0, 3, 6]
+    return EXAMPLE_NEURONS.map(nIdx => {
+      let maxRate = 0
+      for (const c of showConds) {
         for (let t = 0; t < T; t++) {
-          const r = inf.rates[t][nIdx]
-          if (r < minR) minR = r
-          if (r > maxR) maxR = r
-          const s = taskData.spikes[inf.condition][0][t][nIdx]
-          if (s > maxS) maxS = s
+          const r = taskData.rates[c][0][t][nIdx]
+          if (r > maxRate) maxRate = r
         }
       }
-      const padR = (maxR - minR) * 0.1 || 0.5
-      rScales.push(scaleLinear().domain([minR - padR, maxR + padR]).range([subH - 6, 4]))
-      sScales.push(scaleLinear().domain([0, maxS || 1]).range([subH - 6, 4]))
-    }
-    return { ratesScales: rScales, spikeScales: sScales }
-  }, [inferred, taskData])
+      return scaleLinear().domain([0, maxRate * 1.1 || 1]).range([neuronH - 4, 2])
+    })
+  }, [taskData])
 
   const handleRegenerate = useCallback(() => setSeed(s => s + 1), [])
 
-  // Subdivide Panel 3 vertically for 3 neurons
-  const neuronH = (PLOT_H - 20) / EXAMPLE_NEURONS.length
+  const showConds = [0, 3, 6] // conditions shown in rates panel
 
   return (
     <div>
@@ -113,7 +109,7 @@ export default function LFADSTeaser() {
         viewBox={`0 0 ${W} ${H}`}
         style={{ display: "block", width: "100%", height: "auto" }}
       >
-        {/* Panel 1: Raster plot */}
+        {/* Panel 1: Spike rasters — 3 conditions separated vertically */}
         <g transform={`translate(${panelX(0)}, ${MARGIN.top})`}>
           <text
             x={PANEL_W / 2} y={-12}
@@ -123,43 +119,55 @@ export default function LFADSTeaser() {
             Spike rasters
           </text>
 
-          {/* One trial per condition */}
-          {inferred.map(inf => {
-            const c = inf.condition
-            const spikes = taskData.spikes[c][0]
-            const color = schemeTableau10[c % 10]
+          {RASTER_CONDITIONS.map((cond, bandIdx) => {
+            const bandY = bandIdx * condBandH
+            const spikes = taskData.spikes[cond][0]
+            const color = schemeTableau10[cond % 10]
             const ticks = []
-            for (let t = 0; t < T; t++) {
-              for (let n = 0; n < N_NEURONS; n++) {
+
+            for (let n = 0; n < N_NEURONS; n++) {
+              for (let t = 0; t < T; t++) {
                 if (spikes[t][n] > 0) {
+                  const y = bandY + 3 + n * neuronStep
                   ticks.push(
                     <line
-                      key={`${c}-${t}-${n}`}
+                      key={`${cond}-${n}-${t}`}
                       x1={rasterSx(t)}
-                      y1={rasterSy(n) - 2}
+                      y1={y}
                       x2={rasterSx(t)}
-                      y2={rasterSy(n) + 2}
+                      y2={y + Math.min(neuronStep * 0.7, 3)}
                       stroke={color}
-                      strokeWidth={0.8}
-                      opacity={0.7}
+                      strokeWidth={0.6}
+                      opacity={0.65}
                     />
                   )
                 }
               }
             }
-            return <g key={c}>{ticks}</g>
+
+            return (
+              <g key={cond}>
+                {ticks}
+                {/* Condition label */}
+                <text
+                  x={PANEL_W + 4} y={bandY + condBandH / 2}
+                  dominantBaseline="middle"
+                  style={{ fontFamily: "var(--font-mono)", fontSize: 7, fill: color }}
+                >
+                  c{cond + 1}
+                </text>
+                {/* Separator line */}
+                {bandIdx < RASTER_CONDITIONS.length - 1 && (
+                  <line
+                    x1={0} y1={bandY + condBandH}
+                    x2={PANEL_W} y2={bandY + condBandH}
+                    stroke="#e8e6e0" strokeWidth={0.5}
+                  />
+                )}
+              </g>
+            )
           })}
 
-          {/* Y-axis label */}
-          <text
-            x={-6} y={PLOT_H / 2}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            transform={`rotate(-90, -6, ${PLOT_H / 2})`}
-            style={{ fontFamily: "var(--font-mono)", fontSize: 9, fill: "#aaa" }}
-          >
-            Neuron
-          </text>
           <text
             x={PANEL_W / 2} y={PLOT_H + 16}
             textAnchor="middle"
@@ -169,7 +177,7 @@ export default function LFADSTeaser() {
           </text>
         </g>
 
-        {/* Panel 2: Latent trajectories */}
+        {/* Panel 2: Latent trajectories — ground truth, all 8 conditions */}
         <g transform={`translate(${panelX(1)}, ${MARGIN.top})`}>
           <text
             x={PANEL_W / 2} y={-12}
@@ -179,27 +187,44 @@ export default function LFADSTeaser() {
             Latent trajectories
           </text>
 
-          {inferred.map(inf => {
-            const color = schemeTableau10[inf.condition % 10]
-            const path = inf.states
-              .map((s, t) => `${t === 0 ? "M" : "L"}${latSx(s[0])},${latSy(s[1])}`)
-              .join(" ")
+          {Array.from({ length: N_CONDITIONS }, (_, c) => {
+            const lat = taskData.latents[c][0]
+            const color = schemeTableau10[c % 10]
+            // Build path from ground-truth latent dims 0 and 1
+            const pts = []
+            for (let t = 0; t < T; t++) {
+              if (lat[t][0] === 0 && lat[t][1] === 0 && t < 30) continue // skip pre-movement zeros
+              pts.push(`${pts.length === 0 ? "M" : "L"}${latSx(lat[t][0])},${latSy(lat[t][1])}`)
+            }
+            if (pts.length === 0) return null
+            // Find first non-zero point for start marker
+            let startT = 0
+            for (let t = 0; t < T; t++) {
+              if (lat[t][0] !== 0 || lat[t][1] !== 0) { startT = t; break }
+            }
             return (
-              <g key={inf.condition}>
+              <g key={c}>
                 <path
-                  d={path}
+                  d={pts.join(" ")}
                   fill="none"
                   stroke={color}
-                  strokeWidth={1.2}
+                  strokeWidth={1.5}
                   opacity={0.8}
                 />
-                {/* Start marker */}
                 <circle
-                  cx={latSx(inf.states[0][0])}
-                  cy={latSy(inf.states[0][1])}
+                  cx={latSx(lat[startT][0])}
+                  cy={latSy(lat[startT][1])}
                   r={2.5}
                   fill={color}
-                  opacity={0.9}
+                />
+                {/* End marker */}
+                <circle
+                  cx={latSx(lat[T - 1][0])}
+                  cy={latSy(lat[T - 1][1])}
+                  r={1.8}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={1}
                 />
               </g>
             )
@@ -213,17 +238,17 @@ export default function LFADSTeaser() {
             Latent dim 1
           </text>
           <text
-            x={-6} y={PLOT_H / 2}
+            x={-8} y={PLOT_H / 2}
             textAnchor="middle"
             dominantBaseline="middle"
-            transform={`rotate(-90, -6, ${PLOT_H / 2})`}
+            transform={`rotate(-90, -8, ${PLOT_H / 2})`}
             style={{ fontFamily: "var(--font-mono)", fontSize: 9, fill: "#aaa" }}
           >
             Latent dim 2
           </text>
         </g>
 
-        {/* Panel 3: Inferred rates */}
+        {/* Panel 3: Ground-truth rates + smoothed spike overlay */}
         <g transform={`translate(${panelX(2)}, ${MARGIN.top})`}>
           <text
             x={PANEL_W / 2} y={-12}
@@ -234,60 +259,58 @@ export default function LFADSTeaser() {
           </text>
 
           {EXAMPLE_NEURONS.map((nIdx, row) => {
-            const yOff = row * neuronH + 8
-            const sy = ratesScales[row]
-            const spikeSy = spikeScales[row]
+            const yOff = row * neuronH + 4
+            const sy = rateScales[row]
 
             return (
               <g key={nIdx} transform={`translate(0, ${yOff})`}>
                 <text
-                  x={-4} y={neuronH / 2 - 2}
+                  x={-4} y={neuronH / 2}
                   textAnchor="end"
                   dominantBaseline="middle"
-                  style={{ fontFamily: "var(--font-mono)", fontSize: 8, fill: "#bbb" }}
+                  style={{ fontFamily: "var(--font-mono)", fontSize: 7, fill: "#bbb" }}
                 >
-                  {`n${nIdx + 1}`}
+                  n{nIdx + 1}
                 </text>
 
-                {/* Raw spike counts as thin gray lines */}
-                {inferred.map(inf => {
-                  const spikes = taskData.spikes[inf.condition][0]
-                  const spikePath = []
+                {/* Smoothed spikes as gray background */}
+                {showConds.map(c => {
+                  const rawSpikes = []
+                  for (let t = 0; t < T; t++) rawSpikes.push(taskData.spikes[c][0][t][nIdx])
+                  const smoothed = smoothTimeSeries(rawSpikes, 2)
+                  const path = []
                   for (let t = 0; t < T; t++) {
-                    const v = spikes[t][nIdx]
-                    spikePath.push(
-                      `${t === 0 ? "M" : "L"}${ratesSx(t)},${spikeSy(v)}`
-                    )
+                    path.push(`${t === 0 ? "M" : "L"}${ratesSx(t)},${sy(smoothed[t])}`)
                   }
                   return (
                     <path
-                      key={`spike-${inf.condition}`}
-                      d={spikePath.join(" ")}
+                      key={`sm-${c}`}
+                      d={path.join(" ")}
                       fill="none"
-                      stroke="#ccc"
-                      strokeWidth={0.5}
+                      stroke="#d0cec8"
+                      strokeWidth={0.6}
                       opacity={0.5}
                     />
                   )
                 })}
 
-                {/* Inferred smooth rates */}
-                {inferred.map(inf => {
-                  const color = schemeTableau10[inf.condition % 10]
+                {/* Ground-truth smooth rates */}
+                {showConds.map(c => {
+                  const color = schemeTableau10[c % 10]
                   const ratePath = []
                   for (let t = 0; t < T; t++) {
                     ratePath.push(
-                      `${t === 0 ? "M" : "L"}${ratesSx(t)},${sy(inf.rates[t][nIdx])}`
+                      `${t === 0 ? "M" : "L"}${ratesSx(t)},${sy(taskData.rates[c][0][t][nIdx])}`
                     )
                   }
                   return (
                     <path
-                      key={`rate-${inf.condition}`}
+                      key={`rate-${c}`}
                       d={ratePath.join(" ")}
                       fill="none"
                       stroke={color}
-                      strokeWidth={1.2}
-                      opacity={0.75}
+                      strokeWidth={1.4}
+                      opacity={0.8}
                     />
                   )
                 })}

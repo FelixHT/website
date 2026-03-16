@@ -145,17 +145,18 @@ export function generateReachingTask(nConditions = 8, nTrials = 15, nNeurons = 2
   // Random observation matrix C: nNeurons x 3
   const C = seededRandn(nNeurons, 3, rng)
 
-  // Scale C to keep rates in reasonable range
+  // Scale C for meaningful modulation — larger so condition differences are visible
   for (let i = 0; i < nNeurons; i++) {
     for (let j = 0; j < 3; j++) {
-      C[i][j] *= 0.3
+      C[i][j] *= 0.6
     }
   }
 
-  // Baseline firing rate (in log space)
+  // Baseline firing rate (in log space) — low so rasters are sparse
+  // exp(-1.5) ≈ 0.22, exp(-0.3) ≈ 0.74 spikes/bin baseline
   const baseline = new Float64Array(nNeurons)
   for (let i = 0; i < nNeurons; i++) {
-    baseline[i] = 0.5 + rng() * 0.5
+    baseline[i] = -1.5 + rng() * 1.2
   }
 
   const spikes = []
