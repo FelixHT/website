@@ -9,6 +9,8 @@ export const COLORS = {
   critique:   "#6a8a6e",
   bci:        "#7a5f9a",
   flag:       "#c0503a",
+  encoder:    "#7b68ae",
+  controller: "#d4a03c",
 }
 
 // Responsive breakpoints (container width)
