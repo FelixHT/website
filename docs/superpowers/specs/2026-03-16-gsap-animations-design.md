@@ -56,7 +56,7 @@ No changes to non-animated figures. GSAP is only imported by the 5 components th
 **Reset:** Plays timeline in reverse at 2x speed.
 
 **Implementation notes:**
-- The "typing" effect for the computation string: animate a `<text>` element's `textLength` or use a clip rect that reveals characters left-to-right
+- The "typing" effect for the computation string: use a clip rect that reveals characters left-to-right (not `textLength`, which stretches glyphs rather than revealing them)
 - Box fill sweep: a `<rect>` inside a `<clipPath>` with its `width` animated from 0 to box width
 - Arrow head scale: `gsap.to(arrowHead, { scale: 1.2, duration: 0.15, yoyo: true, repeat: 1 })`
 
@@ -177,7 +177,7 @@ Only the 5 animated components + shared hook import `gsap`. Tree-shaking ensures
 
 ## Performance constraints
 
-- All animations target SVG attributes (`opacity`, `stroke`, `cx`, `cy`, `width`, `d`, `transform`) — these are GPU-compositable when possible
+- All animations target SVG attributes (`opacity`, `stroke`, `cx`, `cy`, `width`, `d`, `transform`) — these trigger main-thread repaints, not GPU compositing, but element counts are low enough (tens to hundreds) for smooth 60fps
 - No `innerHTML` manipulation — all text updates via React state or GSAP's `textContent` target
 - Pulse circles are created once and reused (hidden/shown), not created/destroyed per animation
 - Timelines are killed on component unmount to prevent memory leaks
