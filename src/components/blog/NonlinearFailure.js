@@ -80,10 +80,6 @@ export default function NonlinearFailure() {
   }, [aligned, X])
 
   // Build SVG path strings
-  const truePath = useMemo(() => {
-    return X.map((r, t) => `${t === 0 ? "M" : "L"}${trueSx(r[0])},${trueSy(r[1])}`).join(" ")
-  }, [X, trueSx, trueSy])
-
   const truePathRight = useMemo(() => {
     return X.map((r, t) => `${t === 0 ? "M" : "L"}${linSx(r[0])},${linSy(r[1])}`).join(" ")
   }, [X, linSx, linSy])

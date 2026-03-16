@@ -80,6 +80,7 @@ export default function LFADSTeaser() {
   )
 
   const { ratesScales, spikeScales } = useMemo(() => {
+    const subH = (PLOT_H - 20) / EXAMPLE_NEURONS.length
     const rScales = []
     const sScales = []
     for (const nIdx of EXAMPLE_NEURONS) {
@@ -95,8 +96,8 @@ export default function LFADSTeaser() {
         }
       }
       const padR = (maxR - minR) * 0.1 || 0.5
-      rScales.push(scaleLinear().domain([minR - padR, maxR + padR]))
-      sScales.push(scaleLinear().domain([0, maxS || 1]))
+      rScales.push(scaleLinear().domain([minR - padR, maxR + padR]).range([subH - 6, 4]))
+      sScales.push(scaleLinear().domain([0, maxS || 1]).range([subH - 6, 4]))
     }
     return { ratesScales: rScales, spikeScales: sScales }
   }, [inferred, taskData])
@@ -235,9 +236,7 @@ export default function LFADSTeaser() {
           {EXAMPLE_NEURONS.map((nIdx, row) => {
             const yOff = row * neuronH + 8
             const sy = ratesScales[row]
-              .range([neuronH - 6, 4])
             const spikeSy = spikeScales[row]
-              .range([neuronH - 6, 4])
 
             return (
               <g key={nIdx} transform={`translate(0, ${yOff})`}>
