@@ -141,7 +141,7 @@ Extends `figureConstants.js`. Maintains visual continuity with CCA and PSID.
 | Generator / latent dynamics | Blue | `#4A90D9` | = latent state in PSID |
 | Observations / spikes | Teal-green | `#4A7C6F` | = observations in PSID |
 | Behavior / reach conditions | Orange | `#D4783C` | = behavior in PSID |
-| Encoder / inference network | Purple | `#8b6aad` | New color (distinct from `bci: #7a5f9a` in figureConstants) |
+| Encoder / inference network | Purple | `#7b68ae` | New color (distinct from `bci: #7a5f9a` in figureConstants) |
 | Controller / inferred inputs | Amber | `#d4a03c` | = `dynamics` in figureConstants |
 | KL / regularization | Red-brown | `#c0503a` | = `challenge` in figureConstants |
 | Noise / inactive | Gray | `#999999` | = noise across series |
@@ -186,7 +186,7 @@ src/components/blog/DimensionalityOverfit.js
 
 ### Modified files (3)
 
-- `src/components/blog/figureConstants.js` — add `encoder: "#8b6aad"` and `controller: "#d4a03c"` to COLORS
+- `src/components/blog/figureConstants.js` — add `encoder: "#7b68ae"` and `controller: "#d4a03c"` to COLORS
 - `src/pages/index.js` — add LFADS card to blog section
 - `src/pages/blog/psid.js` — replace the existing forward-link paragraph (lines 781-785, which currently promises a multi-population alignment post) with a link to LFADS: "The next post in this series moves from linear to nonlinear dynamics..."
 
