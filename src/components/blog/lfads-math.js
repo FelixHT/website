@@ -16,6 +16,13 @@ import { mulberry32, seededRandn } from "./psid-math"
  */
 export function poissonSample(rate, rng) {
   if (rate <= 0) return 0
+  if (rate > 30) {
+    // Normal approximation: Poisson(rate) ~ N(rate, rate) for large rate
+    const u1 = rng() || 1e-15
+    const u2 = rng()
+    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
+    return Math.max(0, Math.round(rate + Math.sqrt(rate) * z))
+  }
   const L = Math.exp(-rate)
   let k = 0
   let p = 1
