@@ -96,7 +96,7 @@ The post motivates LFADS through the single-trial inference problem: trial-avera
 
 ## Math module: `lfads-math.js`
 
-Imports shared linear algebra from `cca-math.js` and seeded PRNG from `psid-math.js`. ~600 lines.
+Imports shared linear algebra from `cca-math.js` and seeded PRNG from `psid-math.js`. ~800 lines.
 
 ### Synthetic data generators
 
@@ -141,13 +141,15 @@ Extends `figureConstants.js`. Maintains visual continuity with CCA and PSID.
 | Generator / latent dynamics | Blue | `#4A90D9` | = latent state in PSID |
 | Observations / spikes | Teal-green | `#4A7C6F` | = observations in PSID |
 | Behavior / reach conditions | Orange | `#D4783C` | = behavior in PSID |
-| Encoder / inference network | Purple | `#8b6aad` | New — `bci` in figureConstants |
+| Encoder / inference network | Purple | `#8b6aad` | New color (distinct from `bci: #7a5f9a` in figureConstants) |
 | Controller / inferred inputs | Amber | `#d4a03c` | = `dynamics` in figureConstants |
 | KL / regularization | Red-brown | `#c0503a` | = `challenge` in figureConstants |
 | Noise / inactive | Gray | `#999999` | = noise across series |
 | Condition colors (8 directions) | Categorical | — | `d3.schemeTableau10` sliced to 8 |
 
 **VariableLegend groups:**
+
+`scrollTargetId: "from-linear-to-nonlinear"` (appears when section 2 scrolls into view, where notation is introduced)
 
 - Generator: `x_t`, `A` (GRU), `g_t` — blue
 - Observations: `y_t`, `C`, `λ_t` (rates) — teal
@@ -162,7 +164,7 @@ Extends `figureConstants.js`. Maintains visual continuity with CCA and PSID.
 
 ```
 src/pages/blog/lfads.js                          — main post (~2000-2500 lines)
-src/components/blog/lfads-math.js                — math module (~600 lines)
+src/components/blog/lfads-math.js                — math module (~800 lines)
 src/components/blog/lfads-demo-model.json        — pre-trained weights (~50KB)
 src/components/blog/LFADSTeaser.js
 src/components/blog/TrialVariabilityExplorer.js
@@ -186,7 +188,7 @@ src/components/blog/DimensionalityOverfit.js
 
 - `src/components/blog/figureConstants.js` — add `encoder: "#8b6aad"` and `controller: "#d4a03c"` to COLORS
 - `src/pages/index.js` — add LFADS card to blog section
-- `src/pages/blog/psid.js` — add forward link to LFADS ("The next post in this series")
+- `src/pages/blog/psid.js` — replace the existing forward-link paragraph (lines 781-785, which currently promises a multi-population alignment post) with a link to LFADS: "The next post in this series moves from linear to nonlinear dynamics..."
 
 ## Synthetic data design
 
