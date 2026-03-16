@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react"
 import { scaleLinear } from "d3-scale"
-import { BTN_BASE } from "./figureConstants"
 
 const W = 800
 const H = 400
