@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useRef, useEffect } from "react"
+import gsap from "gsap"
 import { scaleLinear, scaleLog } from "d3-scale"
 import { unrollRNN, computeGradientNorms } from "./lfads-math"
 import { BTN_BASE, btnActive } from "./figureConstants"
@@ -34,6 +35,10 @@ function gradColor(t) {
   const g = Math.round(144 + t * (80 - 144))
   const b = Math.round(217 + t * (58 - 217))
   return `rgb(${r},${g},${b})`
+}
+
+function formatRatio(r) {
+  return r < 1e-3 || r > 1e6 ? r.toExponential(1) : r.toFixed(3)
 }
 
 export default function VanishingGradientExplorer() {
@@ -121,9 +126,120 @@ export default function VanishingGradientExplorer() {
   const graphBoxes = Math.min(seqLength, 30)
   const graphSpacing = CHART_W / graphBoxes
 
+  // --- Animation refs ---
+  const svgRef = useRef(null)
+  const ratioRef = useRef(null)
+  const prevGradsRef = useRef(null)
+  const prevLenRef = useRef(null)
+  const prevRatioRef = useRef(null)
+  const isFirstRender = useRef(true)
+
+  useEffect(() => {
+    // On first render, store initial state and skip animation
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      prevGradsRef.current = [...clampedNorms]
+      prevLenRef.current = seqLength
+      prevRatioRef.current = ratio
+      return
+    }
+
+    const svg = svgRef.current
+    if (!svg) return
+
+    const prevGrads = prevGradsRef.current || []
+    const prevLen = prevLenRef.current || seqLength
+    const prevRatio = prevRatioRef.current || 0
+
+    // Kill any in-flight animations on bars and arrows
+    const bars = svg.querySelectorAll(".vg-bar")
+    const arrows = svg.querySelectorAll(".vg-graph-arrow")
+    gsap.killTweensOf(bars)
+    gsap.killTweensOf(arrows)
+
+    const lenChanged = prevLen !== seqLength
+
+    // --- Animate bars right-to-left (domino cascade) ---
+    bars.forEach((bar) => {
+      const idx = Number(bar.getAttribute("data-idx"))
+      // Reverse index for right-to-left stagger
+      const staggerIdx = seqLength - 1 - idx
+      const isNew = lenChanged && idx >= prevLen
+
+      // Target values (already set as attributes by React render)
+      const targetY = Number(bar.getAttribute("data-target-y"))
+      const targetH = Number(bar.getAttribute("data-target-h"))
+      const targetFill = bar.getAttribute("data-target-fill")
+
+      if (isNew) {
+        // New bar: scale in from bottom
+        gsap.fromTo(
+          bar,
+          {
+            attr: { y: CHART_H, height: 0 },
+            opacity: 0,
+          },
+          {
+            attr: { y: targetY, height: targetH },
+            opacity: 0.8,
+            duration: 0.35,
+            delay: staggerIdx * 0.04,
+            ease: "back.out(1.2)",
+          }
+        )
+      } else {
+        // Existing bar: determine if growing or shrinking
+        const prevNorm = prevGrads[idx]
+        const currNorm = clampedNorms[idx]
+        const growing = currNorm > (prevNorm || 0)
+        const ease = growing ? "back.out(1.2)" : "power2.out"
+
+        gsap.to(bar, {
+          attr: { y: targetY, height: targetH },
+          fill: targetFill,
+          duration: 0.35,
+          delay: staggerIdx * 0.03,
+          ease,
+        })
+      }
+    })
+
+    // --- Animate arrows: fade-swap colors ---
+    arrows.forEach((arrow) => {
+      const idx = Number(arrow.getAttribute("data-idx"))
+      const targetColor = arrow.getAttribute("data-target-stroke")
+      gsap.to(arrow, {
+        stroke: targetColor,
+        duration: 0.3,
+        delay: (graphBoxes - 1 - idx) * 0.03,
+        ease: "power2.out",
+      })
+    })
+
+    // --- Animate ratio number ---
+    if (ratioRef.current) {
+      const ratioEl = ratioRef.current
+      const proxy = { value: prevRatio }
+      gsap.to(proxy, {
+        value: ratio,
+        duration: 0.5,
+        ease: "power2.out",
+        onUpdate() {
+          ratioEl.textContent = `||dL/dh\u2080|| / ||dL/dh_T|| = ${formatRatio(proxy.value)}`
+        },
+      })
+    }
+
+    // Store current values for next transition
+    prevGradsRef.current = [...clampedNorms]
+    prevLenRef.current = seqLength
+    prevRatioRef.current = ratio
+  }, [mode, seqLength, gradientNorms]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div style={{ fontFamily: FONT }}>
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         style={{ display: "block", width: "100%", height: "auto" }}
       >
@@ -156,14 +272,20 @@ export default function VanishingGradientExplorer() {
           {clampedNorms.map((norm, t) => {
             const barH = CHART_H - sy(Math.min(norm, displayMax * 2))
             const colorT = t / Math.max(seqLength - 1, 1)
+            const fill = gradColor(colorT)
             return (
               <rect
+                className="vg-bar"
+                data-idx={t}
+                data-target-y={CHART_H - barH}
+                data-target-h={Math.max(barH, 0.5)}
+                data-target-fill={fill}
                 key={t}
                 x={sx(t) - barW / 2}
                 y={CHART_H - barH}
                 width={barW}
                 height={Math.max(barH, 0.5)}
-                fill={gradColor(colorT)}
+                fill={fill}
                 opacity={0.8}
                 rx={1}
               />
@@ -186,6 +308,7 @@ export default function VanishingGradientExplorer() {
         <g transform={`translate(${MARGIN.left}, ${GRAPH_Y})`}>
           {Array.from({ length: graphBoxes }, (_, i) => {
             const cx = graphSpacing * i + graphSpacing / 2
+            const arrowColor = mode === "tanh" ? COLOR_TANH : COLOR_LINEAR
             return (
               <g key={i}>
                 <rect
@@ -200,11 +323,14 @@ export default function VanishingGradientExplorer() {
                 />
                 {i < graphBoxes - 1 && (
                   <line
+                    className="vg-graph-arrow"
+                    data-idx={i}
+                    data-target-stroke={arrowColor}
                     x1={cx + BOX_S / 2 + 1}
                     y1={BOX_S / 2}
                     x2={cx + graphSpacing - BOX_S / 2 - 1}
                     y2={BOX_S / 2}
-                    stroke="#aaa"
+                    stroke={arrowColor}
                     strokeWidth={0.8}
                   />
                 )}
@@ -231,12 +357,13 @@ export default function VanishingGradientExplorer() {
 
         {/* Gradient ratio annotation */}
         <text
+          ref={ratioRef}
           x={W - MARGIN.right}
           y={MARGIN.top + 16}
           textAnchor="end"
           style={{ fontFamily: FONT, fontSize: 11, fill: "#555" }}
         >
-          {`||dL/dh₀|| / ||dL/dh_T|| = ${ratio < 1e-3 || ratio > 1e6 ? ratio.toExponential(1) : ratio.toFixed(3)}`}
+          {`||dL/dh₀|| / ||dL/dh_T|| = ${formatRatio(ratio)}`}
         </text>
       </svg>
 
