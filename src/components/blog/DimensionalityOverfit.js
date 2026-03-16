@@ -19,7 +19,6 @@ const ROW_GAP = 30
 const PLOT_W = W - MARGIN.left - MARGIN.right
 
 const DIMS = [1, 2, 3, 4, 5, 6, 8]
-const N_COND = 1
 const N_TRIALS = 3
 const N_NEURONS = 20
 const T = 100

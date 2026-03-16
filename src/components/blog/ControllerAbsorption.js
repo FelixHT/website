@@ -6,7 +6,6 @@ import {
   loadDemoModel,
   gruStep,
 } from "./lfads-math"
-import { mulberry32 } from "./psid-math"
 import modelJson from "./lfads-demo-model.json"
 
 const W = 800
@@ -32,8 +31,7 @@ const COLOR_RATE = "#4A7C6F"
  * For the well-regularized model: controller outputs are sparse/small.
  * For the under-regularized model: controller outputs are large/dense.
  */
-function simulateControllerSignals(spikes, model, seed) {
-  const rng = mulberry32(seed)
+function simulateControllerSignals(spikes, model) {
   const { states, rates } = inferSingleTrial(spikes, model)
   const ctrl = model.controller
   const ctrlDim = ctrl.Wr.length // 2
@@ -81,11 +79,11 @@ export default function ControllerAbsorption() {
   const trialSpikes = taskData.spikes[0][0]
 
   const wellRegData = useMemo(
-    () => simulateControllerSignals(trialSpikes, wellRegModel, 42),
+    () => simulateControllerSignals(trialSpikes, wellRegModel),
     [trialSpikes, wellRegModel]
   )
   const underRegData = useMemo(
-    () => simulateControllerSignals(trialSpikes, underRegModel, 42),
+    () => simulateControllerSignals(trialSpikes, underRegModel),
     [trialSpikes, underRegModel]
   )
 
