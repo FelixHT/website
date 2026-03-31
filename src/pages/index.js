@@ -211,15 +211,6 @@ const IndexPage = () => {
 
           <div className="articles-column">
             <ArticleCard
-              title="Preferential Subspace Identification"
-              author="Dimensionality Reduction"
-              description="Recovering latent dynamics from neural recordings and separating behaviorally relevant from irrelevant structure."
-              tag="March 2026"
-              link="/blog/psid/"
-              borderColor="#4A90D9"
-              headerBgColor="rgba(74, 144, 217, 0.12)"
-            />
-            <ArticleCard
               title="Neuroscience Keeps Solving the Same Problems Twice"
               author="Metascience"
               description="A structured claim-dependency layer for science, and an experiment to test whether it accelerates convergence."
@@ -261,6 +252,8 @@ const IndexPage = () => {
                 { title: "Procrustes and hyperalignment", author: "Aligning neural representations across subjects.", link: "/blog/procrustes-alignment/", part: 10 },
                 { title: "Reduced-rank regression and dPCA", author: "Predicting one population's activity from another through a low-rank bottleneck.", link: "/blog/rrr-dpca/", part: 11 },
                 { title: "Linear dynamical systems and latent state", author: "Why neural trajectories are not just clouds of points.", link: "/blog/linear-dynamical-systems/", part: 12 },
+                { title: "Subspace identification", author: "Recovering latent dynamics from recorded neural activity.", link: "/blog/subspace-identification/", part: 13 },
+                { title: "Preferential subspace identification", author: "Separating behaviorally relevant from irrelevant dynamics.", link: "/blog/psid/", part: 14 },
               ].map((entry) => (
                 <ArticleCard
                   key={entry.part}

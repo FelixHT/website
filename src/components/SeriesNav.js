@@ -15,6 +15,8 @@ const SERIES = [
   { part: 10, title: "Procrustes and hyperalignment", path: "/blog/procrustes-alignment/" },
   { part: 11, title: "Reduced-rank regression and dPCA", path: "/blog/rrr-dpca/" },
   { part: 12, title: "Linear dynamical systems and latent state", path: "/blog/linear-dynamical-systems/" },
+  { part: 13, title: "Subspace identification", path: "/blog/subspace-identification/" },
+  { part: 14, title: "Preferential subspace identification", path: "/blog/psid/" },
 ]
 
 export default function SeriesNav({ part }) {

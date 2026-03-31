@@ -21,6 +21,7 @@ import PSIDValidation from "../../components/blog/PSIDValidation"
 import SubspacePartition from "../../components/blog/SubspacePartition"
 import CodeBlock from "../../components/blog/CodeBlock"
 import VariableLegend from "../../components/blog/VariableLegend"
+import SeriesNav from "../../components/SeriesNav"
 import "./blog-post.css"
 
 const TOC_ITEMS = [
@@ -69,6 +70,12 @@ const PSIDPost = () => {
               <span className="blog-post__byline-label">Reading time</span>
               <span className="blog-post__byline-value">{readingTime ? `${readingTime} min` : ""}</span>
             </div>
+            <div className="blog-post__byline-group">
+              <span className="blog-post__byline-label">Series</span>
+              <span className="blog-post__byline-value">
+                Linear Algebra for Neural Data, Part 14
+              </span>
+            </div>
           </div>
         </div>
 
@@ -86,22 +93,17 @@ const PSIDPost = () => {
           <h2 id="introduction">Introduction</h2>
 
           <p>
-            In the <Link to="/blog/cca/">CCA post</Link>, we found a way
-            to identify shared linear structure between two datasets. We found weight
-            vectors that maximized the correlation between projections of paired
-            observations, and used these to align neural recordings across
-            subjects. But CCA treats each row of data as an independent
-            observation. Neural data has temporal structure: the activity at
-            time <InlineMath tex="t" /> depends on the activity at
-            time <InlineMath tex="t-1" />, and this dependence is what we mean by
-            dynamics. CCA ignores it entirely.
+            In the <Link to="/blog/subspace-identification/">previous post</Link>, we
+            recovered latent dynamics from neural recordings using subspace
+            identification. The method finds the subspace that best explains the
+            observed neural activity — the directions in which the population
+            moves in ways that are consistent, low-dimensional, and temporally
+            structured. But "best for explaining observations" is not the same as
+            "best for predicting behavior."
           </p>
 
           <p>
-            This post picks up where CCA left off. We will build up the
-            mathematics of linear dynamical systems, derive a classical method
-            for recovering latent dynamics from observations (subspace
-            identification), and then extend it to preferentially extract the
+            This post extends subspace identification to preferentially extract the
             dynamics that relate to behavior. The result is Preferential Subspace
             Identification, or PSID <Citation numbers={1} />, a method that
             cleanly partitions latent neural dynamics into a behaviorally
@@ -976,6 +978,7 @@ def psid(Y, Z, d_rel, d_total, num_lags):
           </ol>
         </div>
 
+        <SeriesNav part={14} />
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">
           <Link to="/" className="blog-post__back-link">
