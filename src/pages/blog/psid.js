@@ -762,7 +762,7 @@ const PSIDPost = () => {
             to dissociate intrinsic from stimulus-driven dynamics,
             DPAD <Citation numbers={8} /> replaces the linear model with
             recurrent neural networks, and optimal
-            smoothing <Citation numbers={9} /> leverages future neural data
+            smoothing <Citation numbers={9} /> uses future neural data
             for offline estimation. All methods come with a publicly available
             MATLAB/Python toolbox <Citation numbers={7} />.
           </p>

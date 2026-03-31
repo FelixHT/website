@@ -299,9 +299,9 @@ const LeastSquaresPost = () => {
             to <InlineMath tex="\kappa(A) \cdot \epsilon" /> in relative
             terms. When <InlineMath tex="\kappa = 10^6" />, a 0.1% change
             in the data can produce a 1000x change in the estimated
-            weights. The solution is not wrong in the algebraic sense — it
-            still minimizes the squared error — but it is useless in the
-            practical sense, because the weights are dominated by
+            weights. The solution still minimizes the squared error,
+            but it is useless in the
+            practical sense: the weights are dominated by
             amplified noise rather than signal.
           </p>
 
@@ -333,7 +333,7 @@ const LeastSquaresPost = () => {
             Second, when the number of neurons exceeds the number of
             trials (<InlineMath tex="n > m" />),{" "}
             <InlineMath tex="A^\top A" /> is not just nearly
-            singular — it is exactly singular. It has
+            singular. It is exactly singular. It has
             at most <InlineMath tex="m" /> nonzero eigenvalues, and
             the remaining <InlineMath tex="n - m" /> eigenvalues are
             zero. The condition number is infinite. This is the
@@ -347,7 +347,7 @@ const LeastSquaresPost = () => {
             corresponds to a direction in the input space. The
             pseudoinverse divides by <InlineMath tex="\sigma_i" />{" "}
             along that direction. For the large singular values, this
-            division is harmless — a signal that was stretched by 10
+            division is harmless: a signal that was stretched by 10
             gets compressed back by 1/10. For the tiny singular
             values, the division is catastrophic. A direction where
             the data barely varies (say <InlineMath tex="\sigma_i = 0.001" />)
@@ -413,7 +413,7 @@ const LeastSquaresPost = () => {
               ridge regression matched or outperformed more complex
               decoders across multiple datasets and brain areas.
               Nearly every practical neural decoder uses some form
-              of regularization — the question is not whether to
+              of regularization. The question is not whether to
               regularize, but how much.
             </Sidenote>
           </p>
@@ -432,8 +432,8 @@ const LeastSquaresPost = () => {
 
           <p>
             Take the gradient, set it to zero, and you get equation 5
-            back. The two views — inflating eigenvalues versus
-            penalizing weight magnitude — describe the same
+            back. Both views (inflating eigenvalues and
+            penalizing weight magnitude) describe the same
             computation. The penalty view makes the tradeoff
             explicit: the first term wants the predictions to match
             the data, the second term wants the weights to stay
@@ -483,7 +483,7 @@ const LeastSquaresPost = () => {
           <p>
             The figure shows what happens as you turn the dial. With
             no regularization, the fit hugs the training data
-            closely — too closely, because it is tracking noise. As
+            too closely, tracking noise rather than signal. As
             you increase <InlineMath tex="\lambda" />, the regression
             line smooths out. The training error rises slightly, but
             the test error drops. Push <InlineMath tex="\lambda" />{" "}
@@ -551,7 +551,7 @@ const LeastSquaresPost = () => {
             underfits: the weights are crushed toward zero, and the
             decoder ignores real structure in the data. The bottom of
             the U is the CV-optimal <InlineMath tex="\lambda" />. The
-            RidgeExplorer above already shows this pattern — as you
+            RidgeExplorer above already shows this pattern: as you
             increase <InlineMath tex="\lambda" />, training error rises
             monotonically while test error dips and then climbs back up.
           </p>
@@ -561,9 +561,9 @@ const LeastSquaresPost = () => {
             problem is. Consider decoding hand velocity from motor
             cortex. With 100 neurons and 200 trials, the data matrix is
             overdetermined and reasonably well-conditioned. The
-            optimal <InlineMath tex="\lambda" /> is small — perhaps 1 to
-            10 — because there is enough data to estimate the weights
-            reliably, and only a gentle nudge is needed. Now cut the
+            optimal <InlineMath tex="\lambda" /> is small, perhaps 1 to
+            10, because there is enough data to estimate the weights
+            reliably and only a gentle nudge is needed. Now cut the
             trial count to 50. The problem becomes underdetermined (more
             neurons than trials), the condition number goes to infinity,
             and the optimal <InlineMath tex="\lambda" /> shifts higher,
@@ -583,7 +583,7 @@ const LeastSquaresPost = () => {
             least-squares solution expands in the right singular
             vectors: the weight along direction <InlineMath tex="v_i" />{" "}
             is proportional to <InlineMath tex="1/\sigma_i" />. We saw
-            in section 3 that this is the source of trouble — when{" "}
+            in section 3 that this is the source of trouble: when{" "}
             <InlineMath tex="\sigma_i" /> is small,{" "}
             <InlineMath tex="1/\sigma_i" /> is enormous, and the
             corresponding weight component is dominated by noise.
@@ -605,12 +605,12 @@ const LeastSquaresPost = () => {
             is large relative to <InlineMath tex="\sqrt{\lambda}" />,
             the denominator is dominated by{" "}
             <InlineMath tex="\sigma_i^2" />,
-            and <InlineMath tex="f_i \approx 1/\sigma_i" /> — essentially
+            and <InlineMath tex="f_i \approx 1/\sigma_i" />, essentially
             the same as the pseudoinverse. The well-measured directions
             pass through unchanged. When <InlineMath tex="\sigma_i" />{" "}
             is small relative to <InlineMath tex="\sqrt{\lambda}" />,
             the denominator is dominated by <InlineMath tex="\lambda" />,
-            and <InlineMath tex="f_i \approx \sigma_i/\lambda" /> — a
+            and <InlineMath tex="f_i \approx \sigma_i/\lambda" />, a
             value close to zero. The poorly measured directions are
             heavily damped. There is no sharp cutoff. The transition
             is smooth: the filter rolls off continuously as the singular
@@ -632,14 +632,14 @@ const LeastSquaresPost = () => {
 
           <FigureContainer
             width="outset"
-            caption="Singular values (bars) with two filter functions overlaid. The pseudoinverse (red) divides by each singular value — small values produce huge weights. Ridge (teal) damps the small ones. Adjust λ to see the filter change."
+            caption="Singular values (bars) with two filter functions overlaid. The pseudoinverse (red) divides by each singular value; small values produce huge weights. Ridge (teal) damps the small ones. Adjust λ to see the filter change."
           >
             <ShrinkageExplorer />
           </FigureContainer>
 
           <p>
             The figure makes the mechanism visible. The bars show the
-            singular values of a typical neural data matrix — a few
+            singular values of a typical neural data matrix: a few
             large ones capturing the dominant population activity
             patterns, then a long tail of small values reflecting
             noise directions. The pseudoinverse filter (red) climbs
@@ -657,7 +657,7 @@ const LeastSquaresPost = () => {
             <Link to="/blog/svd/">Part 6</Link>. Truncated SVD applies a
             hard threshold: keep the top <InlineMath tex="k" /> singular
             values, discard the rest entirely. The filter function is a
-            step — <InlineMath tex="1/\sigma_i" /> for the
+            step: <InlineMath tex="1/\sigma_i" /> for the
             first <InlineMath tex="k" /> directions, zero for the
             remainder. Ridge is a soft threshold: it gradually damps the
             contribution of each direction rather than making a binary
@@ -702,7 +702,7 @@ const LeastSquaresPost = () => {
             The geometric reason the L1 penalty produces zeros connects
             back to the norm balls from{" "}
             <Link to="/blog/vectors-geometry/">Part 1</Link>. The L2 ball
-            is round — a circle in two dimensions, a sphere in three. The
+            is round, a circle in two dimensions and a sphere in three. The
             L1 ball is a diamond (a rotated square in 2D, an octahedron in
             3D), with sharp corners sitting on the coordinate axes.
             Constrained optimization finds the point where the elliptical
@@ -718,7 +718,7 @@ const LeastSquaresPost = () => {
               <InlineMath tex="\lambda_1 \|w\|_1 + \lambda_2 \|w\|_2^2" />.
               This gives sparsity from the L1 term and stability from the
               L2 term. Unlike pure lasso, elastic net handles correlated
-              predictors gracefully — it tends to include or exclude groups
+              predictors gracefully, tending to include or exclude groups
               of correlated neurons together rather than arbitrarily
               picking one from each correlated pair.
             </Sidenote>
@@ -726,7 +726,7 @@ const LeastSquaresPost = () => {
 
           <FigureContainer
             width="outset"
-            caption="Toggle between L₂ (circle) and L₁ (diamond) constraints. The L₁ diamond has corners on the axes — when the cost contours touch a corner, one weight is exactly zero."
+            caption="Toggle between L₂ (circle) and L₁ (diamond) constraints. The L₁ diamond has corners on the axes; when the cost contours touch a corner, one weight is exactly zero."
           >
             <LassoVsRidgeExplorer />
           </FigureContainer>
@@ -743,7 +743,7 @@ const LeastSquaresPost = () => {
             test-set performance peaks. Push <InlineMath tex="\lambda" />{" "}
             further and even informative neurons get zeroed out, and
             performance degrades. The cross-validation procedure from
-            section 5 works here too — plot held-out error
+            section 5 works here too: plot held-out error
             against <InlineMath tex="\lambda" />, find the minimum, and
             read off both the optimal penalty and the set of neurons
             the decoder selected.
@@ -770,7 +770,7 @@ const LeastSquaresPost = () => {
             the same problem. Canonical correlation analysis (CCA) requires
             inverting sample covariance matrices. Record 100 neurons across
             50 trials and the sample covariance is 100-by-100 but rank 50
-            at most — exactly singular. The same ill-conditioning that
+            at most, which is exactly singular. The same ill-conditioning that
             wrecked ordinary least squares wrecks ordinary CCA. The fix is
             the same too: add <InlineMath tex="\lambda I" /> to the
             covariance matrix before inverting. Regularized CCA is to CCA
@@ -781,7 +781,7 @@ const LeastSquaresPost = () => {
 
           <p>
             The broader point is worth stating plainly. More parameters
-            than data points, correlated features, noise in the target —
+            than data points, correlated features, noise in the target:
             these are not unusual conditions in neuroscience. They are the
             default. Regularization is not an optional add-on for when
             things go wrong. It is what makes any of these methods usable

@@ -258,7 +258,6 @@ const LinearDynamicalSystemsPost = () => {
           </p>
 
           <p>
-            This is not just formalism.
             Churchland et al. <Citation numbers={[3]} /> fit a linear
             dynamics model to motor cortex population activity during
             reaching. They found that the dominant eigenvalues were
@@ -341,13 +340,13 @@ const LinearDynamicalSystemsPost = () => {
             <InlineMath tex="i" /> fires at a rate proportional
             to <InlineMath tex="C_{i,:} \cdot \mathbf{x}_t" />, plus noise.
             The matrix <InlineMath tex="C" /> tells you how each neuron
-            weighs the latent dimensions — how much of mode 1, how much
+            weighs the latent dimensions: how much of mode 1, how much
             of mode 2, and so on.
           </p>
 
           <p>
             Consider what this means concretely. Suppose the latent state
-            is a clean 2D spiral — two dimensions rotating with a slow
+            is a clean 2D spiral, two dimensions rotating with a slow
             decay, exactly the kind of trajectory Churchland et
             al. <Citation numbers={[3]} /> found in motor cortex.
             Project that spiral through a{" "}
@@ -363,7 +362,7 @@ const LinearDynamicalSystemsPost = () => {
 
           <FigureContainer
             width="outset"
-            caption="Left: a clean spiral in 2D latent space. Right: what six neurons observe — each trace is a noisy linear combination of the latent state. Toggle 'show latent' to reveal the two hidden dimensions driving all six traces."
+            caption="Left: a clean spiral in 2D latent space. Right: what six neurons observe. Each trace is a noisy linear combination of the latent state. Toggle 'show latent' to reveal the two hidden dimensions driving all six traces."
           >
             <ObservationMixingExplorer />
           </FigureContainer>
@@ -415,12 +414,12 @@ const LinearDynamicalSystemsPost = () => {
             The unit circle is the stability boundary. An eigenvalue
             inside the circle corresponds to a decaying mode. Outside,
             a growing mode. On the circle, a mode that neither grows
-            nor decays — sustained indefinitely.
+            nor decays, sustained indefinitely.
           </p>
 
           <p>
             Position on the real axis matters too. An eigenvalue sitting
-            on the real axis produces no oscillation — the mode simply
+            on the real axis produces no oscillation. The mode simply
             scales up or down each time step. An eigenvalue off the real
             axis oscillates. The angle from the positive real axis gives
             the frequency: larger angles mean faster rotation. The
@@ -429,11 +428,11 @@ const LinearDynamicalSystemsPost = () => {
           </p>
 
           <p>
-            Translate this to neural populations. Slow modes — eigenvalues
-            near 1 on the real axis — correspond to persistent activity.
+            Translate this to neural populations. Slow modes (eigenvalues
+            near 1 on the real axis) correspond to persistent activity.
             A prefrontal population holding a stimulus identity across a
-            delay period lives in a mode like this. Fast modes —
-            eigenvalues near 0 — correspond to transient responses that
+            delay period lives in a mode like this. Fast modes
+            (eigenvalues near 0) correspond to transient responses that
             die out within a few time steps: a brief sensory-evoked volley
             that fades before the next stimulus arrives. Complex
             eigenvalues correspond to rhythmic or rotational structure. The
@@ -453,10 +452,10 @@ const LinearDynamicalSystemsPost = () => {
 
           <p>
             The eigenvalue map is the complete signature of a linear
-            dynamical system. Two systems with the same eigenvalues —
-            possibly expressed in entirely different coordinate systems,
-            with different observation matrices, different neuron
-            counts — have the same qualitative dynamics. This is the
+            dynamical system. Two systems with the same eigenvalues,
+            even when expressed in entirely different coordinate systems
+            with different observation matrices and different neuron
+            counts, have the same qualitative dynamics. This is the
             dynamical analogue of the basis-change story from Part 2:
             the eigenvalues are invariant, the coordinates are not.
             <Sidenote number={4}>
@@ -482,8 +481,8 @@ const LinearDynamicalSystemsPost = () => {
             matrix <InlineMath tex="C" />. Given recorded neural
             data <InlineMath tex="\mathbf{y}_1, \ldots, \mathbf{y}_T" />,
             can we recover them? In practice we record only the
-            observations — the spiking of hundreds of neurons across
-            time — and the latent state is never directly accessible.
+            observations (the spiking of hundreds of neurons across
+            time), and the latent state is never directly accessible.
             The question of recovering the model from data is not
             just a technical convenience; it is the only way to test
             whether a linear dynamical system is actually a good
@@ -492,7 +491,7 @@ const LinearDynamicalSystemsPost = () => {
 
           <p>
             This is the system identification problem. The key tool
-            turns out to be the Hankel matrix — a matrix built from
+            turns out to be the Hankel matrix, built from
             time-lagged observations, where row <InlineMath tex="i" />
             and column <InlineMath tex="j" /> holds the observation at
             lag <InlineMath tex="i + j - 2" />. Its SVD reveals the
