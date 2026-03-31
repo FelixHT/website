@@ -432,27 +432,26 @@ export default function SubspaceRecoveryExplorer() {
         />
       </svg>
 
-      {/* Slider */}
-      <div className="blog-figure__controls" style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center", marginTop: 8 }}>
-        <label
-          htmlFor="subspace-d-slider"
-          style={{ fontFamily: FONT, fontSize: 12, color: "rgba(0,0,0,0.6)" }}
-        >
-          latent dims:
-        </label>
-        <input
-          id="subspace-d-slider"
-          type="range"
-          min={1}
-          max={6}
-          step={1}
-          value={d}
-          onChange={e => setD(Number(e.target.value))}
-          style={{ width: 140 }}
-        />
-        <span style={{ fontFamily: FONT, fontSize: 12, color: BLUE, minWidth: 12 }}>
-          {d}
-        </span>
+      {/* Toggle */}
+      <div className="blog-figure__controls" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginTop: 8 }}>
+        {[1, 2].map(val => (
+          <button
+            key={val}
+            onClick={() => setD(val)}
+            style={{
+              fontFamily: FONT,
+              fontSize: 12,
+              padding: "4px 14px",
+              background: d === val ? BLUE : "white",
+              color: d === val ? "white" : "#333",
+              border: `1.5px solid ${d === val ? BLUE : "#ccc"}`,
+              borderRadius: 3,
+              cursor: "pointer",
+            }}
+          >
+            d = {val}
+          </button>
+        ))}
       </div>
     </div>
   )
