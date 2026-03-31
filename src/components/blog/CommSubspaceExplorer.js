@@ -125,18 +125,18 @@ function generateDatasets() {
     V2raw.push(row)
   }
 
-  // PCA project V1 and V2 each to 2D for visualization
+  // PCA project V1 to 2D and V2 to 3D for visualization
   const V1_2d = pcaProject2D(V1raw)
-  const V2_2d = pcaProject2D(V2raw)
+  const V2_3d = pcaProject3D(V2raw)
 
   // For the RRR predictions at each rank, we work in the full dLatent space.
   // Rank-k prediction: project V1 onto first k sender directions, map through,
-  // then PCA-project V2 prediction to the same 2D space as actual V2.
+  // then PCA-project V2 prediction to the same 3D space as actual V2.
   const V2mean = colMeans(V2raw)
   const V2centered = V2raw.map(row => row.map((v, j) => v - V2mean[j]))
-  const { basis: v2Basis } = pcaBasis2(V2centered)
+  const { basis: v2Basis3 } = pcaBasis3(V2centered)
 
-  // For each rank, compute predicted V2 in 2D
+  // For each rank, compute predicted V2 in 3D
   const predByRank = []
   const r2ByRank = []
 
@@ -157,9 +157,9 @@ function generateDatasets() {
       V2pred.push(row)
     }
 
-    // Project into same 2D PCA space as V2
-    const V2pred2d = projectWithBasis(V2pred, V2mean, v2Basis)
-    predByRank.push(V2pred2d)
+    // Project into same 3D PCA space as V2
+    const V2pred3d = projectWithBasis3(V2pred, V2mean, v2Basis3)
+    predByRank.push(V2pred3d)
 
     // Compute R^2 in full space
     let ssTot = 0
@@ -176,8 +176,7 @@ function generateDatasets() {
     r2ByRank.push(Math.max(0, 1 - ssRes / ssTot))
   }
 
-  // Communication subspace directions in 2D (for arrows)
-  // Project sender directions into V1 2D space, receiver into V2 2D space
+  // Communication subspace directions in 2D (for V1 arrows)
   const V1mean = colMeans(V1raw)
   const V1centered = V1raw.map(row => row.map((v, j) => v - V1mean[j]))
   const { basis: v1Basis } = pcaBasis2(V1centered)
@@ -189,20 +188,12 @@ function generateDatasets() {
     return [x / len, y / len]
   })
 
-  const receiverDirs2d = receiverDirs.map(dir => {
-    const x = dot(dir, v2Basis[0])
-    const y = dot(dir, v2Basis[1])
-    const len = Math.hypot(x, y) || 1
-    return [x / len, y / len]
-  })
-
   return {
     V1_2d,
-    V2_2d,
+    V2_3d,
     predByRank,
     r2ByRank,
     senderDirs2d,
-    receiverDirs2d,
     sigmas,
   }
 }
@@ -241,8 +232,8 @@ function gramSchmidt(vecs) {
   }
 }
 
-// Power-iteration style PCA to get top-2 eigenvectors of covariance
-function pcaBasis2(centered) {
+// Power-iteration style PCA to get top-k eigenvectors of covariance
+function pcaBasisK(centered, k) {
   const n = centered.length
   const d = centered[0].length
 
@@ -262,36 +253,39 @@ function pcaBasis2(centered) {
     }
   }
 
-  // Power iteration for top eigenvector
   const rng = mulberry32(999)
-  let v1 = Array.from({ length: d }, () => boxMuller(rng))
-  for (let iter = 0; iter < 100; iter++) {
-    const next = new Array(d).fill(0)
-    for (let i = 0; i < d; i++) {
-      for (let j = 0; j < d; j++) next[i] += cov[i][j] * v1[j]
+  const basis = []
+  let curCov = cov.map(row => [...row])
+
+  for (let comp = 0; comp < k; comp++) {
+    // Power iteration for top eigenvector of curCov
+    let v = Array.from({ length: d }, () => boxMuller(rng))
+    for (let iter = 0; iter < 100; iter++) {
+      const next = new Array(d).fill(0)
+      for (let i = 0; i < d; i++) {
+        for (let j = 0; j < d; j++) next[i] += curCov[i][j] * v[j]
+      }
+      const len = Math.sqrt(dot(next, next))
+      v = next.map(x => x / (len || 1))
     }
-    const len = Math.sqrt(dot(next, next))
-    v1 = next.map(x => x / (len || 1))
+    basis.push(v)
+
+    // Deflate
+    const lam = dot(matVec(curCov, v), v)
+    curCov = curCov.map((row, i) =>
+      row.map((val, j) => val - lam * v[i] * v[j])
+    )
   }
 
-  // Deflate
-  const lam1 = dot(matVec(cov, v1), v1)
-  const cov2 = cov.map((row, i) =>
-    row.map((val, j) => val - lam1 * v1[i] * v1[j])
-  )
+  return { basis }
+}
 
-  // Second eigenvector
-  let v2 = Array.from({ length: d }, () => boxMuller(rng))
-  for (let iter = 0; iter < 100; iter++) {
-    const next = new Array(d).fill(0)
-    for (let i = 0; i < d; i++) {
-      for (let j = 0; j < d; j++) next[i] += cov2[i][j] * v2[j]
-    }
-    const len = Math.sqrt(dot(next, next))
-    v2 = next.map(x => x / (len || 1))
-  }
+function pcaBasis2(centered) {
+  return pcaBasisK(centered, 2)
+}
 
-  return { basis: [v1, v2] }
+function pcaBasis3(centered) {
+  return pcaBasisK(centered, 3)
 }
 
 function matVec(M, v) {
@@ -310,10 +304,24 @@ function pcaProject2D(data) {
   return centered.map(row => [dot(row, basis[0]), dot(row, basis[1])])
 }
 
+function pcaProject3D(data) {
+  const means = colMeans(data)
+  const centered = data.map(row => row.map((v, j) => v - means[j]))
+  const { basis } = pcaBasis3(centered)
+  return centered.map(row => [dot(row, basis[0]), dot(row, basis[1]), dot(row, basis[2])])
+}
+
 function projectWithBasis(data, mean, basis) {
   return data.map(row => {
     const centered = row.map((v, j) => v - mean[j])
     return [dot(centered, basis[0]), dot(centered, basis[1])]
+  })
+}
+
+function projectWithBasis3(data, mean, basis) {
+  return data.map(row => {
+    const centered = row.map((v, j) => v - mean[j])
+    return [dot(centered, basis[0]), dot(centered, basis[1]), dot(centered, basis[2])]
   })
 }
 
@@ -353,6 +361,37 @@ function scaleWithFactor(points, cx, cy, factor) {
 }
 
 /* ────────────────────────────────────────────
+   3D → 2D isometric projection for V2 panel
+   ──────────────────────────────────────────── */
+const ISO_AZ = -0.55
+const ISO_EL = 0.38
+const ISO_CA = Math.cos(ISO_AZ), ISO_SA = Math.sin(ISO_AZ)
+const ISO_CE = Math.cos(ISO_EL), ISO_SE = Math.sin(ISO_EL)
+const V2_3D_SCALE = 60
+
+function isoProject(x, y, z, cx, cy, scale) {
+  const rx = x * ISO_CA + z * ISO_SA
+  const rz = -x * ISO_SA + z * ISO_CA
+  const ry = y * ISO_CE - rz * ISO_SE
+  return [cx + rx * scale, cy - ry * scale]
+}
+
+// Compute a scale factor so 3D points fit within the panel
+function sharedScaleFactor3D(allPointSets3d) {
+  let maxAbs = 0
+  for (const points of allPointSets3d) {
+    for (const pt of points) {
+      for (let k = 0; k < 3; k++) {
+        const a = Math.abs(pt[k])
+        if (a > maxAbs) maxAbs = a
+      }
+    }
+  }
+  if (maxAbs === 0) maxAbs = 1
+  return 1 / maxAbs
+}
+
+/* ────────────────────────────────────────────
    Component
    ──────────────────────────────────────────── */
 export default function CommSubspaceExplorer() {
@@ -362,11 +401,10 @@ export default function CommSubspaceExplorer() {
 
   const {
     V1_2d,
-    V2_2d,
+    V2_3d,
     predByRank,
     r2ByRank,
     senderDirs2d,
-    receiverDirs2d,
     sigmas,
   } = data
 
@@ -376,37 +414,43 @@ export default function CommSubspaceExplorer() {
     [V1_2d]
   )
 
-  // Scale V2 actual + predicted into right panel with shared scale
-  const v2Scale = useMemo(() => {
-    const allSets = [V2_2d, ...predByRank]
-    return sharedScaleFactor(allSets, SCATTER_R)
-  }, [V2_2d, predByRank])
+  // Compute a shared normalizer for all V2 3D point sets
+  const v2Norm = useMemo(() => {
+    return sharedScaleFactor3D([V2_3d, ...predByRank])
+  }, [V2_3d, predByRank])
 
-  const v2ActualScaled = useMemo(
-    () => scaleWithFactor(V2_2d, V2_CX, V2_CY, v2Scale),
-    [V2_2d, v2Scale]
-  )
+  // Project V2 actual 3D points through isometric projection
+  const v2ActualScaled = useMemo(() => {
+    return V2_3d.map(([x, y, z]) =>
+      isoProject(x * v2Norm, y * v2Norm, z * v2Norm, V2_CX, V2_CY, V2_3D_SCALE)
+    )
+  }, [V2_3d, v2Norm])
 
-  const v2PredScaled = useMemo(
-    () => predByRank.map(pts => scaleWithFactor(pts, V2_CX, V2_CY, v2Scale)),
-    [predByRank, v2Scale]
-  )
+  // Project V2 predicted 3D points through isometric projection (one per rank)
+  const v2PredScaled = useMemo(() => {
+    return predByRank.map(pts =>
+      pts.map(([x, y, z]) =>
+        isoProject(x * v2Norm, y * v2Norm, z * v2Norm, V2_CX, V2_CY, V2_3D_SCALE)
+      )
+    )
+  }, [predByRank, v2Norm])
 
-  // Per-point prediction error for color-coding
+  // Per-point prediction error for color-coding (in 3D space)
   const predErrors = useMemo(() => {
     const pred = predByRank[rank - 1]
     const errors = []
     let maxErr = 0
     for (let i = 0; i < N; i++) {
-      const dx = V2_2d[i][0] - pred[i][0]
-      const dy = V2_2d[i][1] - pred[i][1]
-      const err = Math.sqrt(dx * dx + dy * dy)
+      const dx = V2_3d[i][0] - pred[i][0]
+      const dy = V2_3d[i][1] - pred[i][1]
+      const dz = V2_3d[i][2] - pred[i][2]
+      const err = Math.sqrt(dx * dx + dy * dy + dz * dz)
       errors.push(err)
       if (err > maxErr) maxErr = err
     }
     // Normalize to [0, 1]
     return errors.map(e => (maxErr > 0 ? e / maxErr : 0))
-  }, [V2_2d, predByRank, rank])
+  }, [V2_3d, predByRank, rank])
 
   // Interpolate color from V2_PRED (good) to V2_RED (bad) based on error
   function errorColor(normalizedErr) {
@@ -419,6 +463,26 @@ export default function CommSubspaceExplorer() {
     const b = Math.round(good.b + (bad.b - good.b) * t)
     return `rgb(${r},${g},${b})`
   }
+
+  // 3D axis endpoints for V2 panel
+  const axisLen = 1.15
+  const v2Axes = useMemo(() => {
+    const origin = isoProject(0, 0, 0, V2_CX, V2_CY, V2_3D_SCALE)
+    return [
+      { from: origin, to: isoProject(axisLen, 0, 0, V2_CX, V2_CY, V2_3D_SCALE), label: "PC1" },
+      { from: origin, to: isoProject(0, axisLen, 0, V2_CX, V2_CY, V2_3D_SCALE), label: "PC2" },
+      { from: origin, to: isoProject(0, 0, axisLen, V2_CX, V2_CY, V2_3D_SCALE), label: "PC3" },
+    ]
+  }, [])
+
+  const v2NegAxes = useMemo(() => {
+    const origin = isoProject(0, 0, 0, V2_CX, V2_CY, V2_3D_SCALE)
+    return [
+      { from: origin, to: isoProject(-0.35, 0, 0, V2_CX, V2_CY, V2_3D_SCALE) },
+      { from: origin, to: isoProject(0, -0.35, 0, V2_CX, V2_CY, V2_3D_SCALE) },
+      { from: origin, to: isoProject(0, 0, -0.35, V2_CX, V2_CY, V2_3D_SCALE) },
+    ]
+  }, [])
 
   const currentR2 = r2ByRank[rank - 1]
   const currentPred = v2PredScaled[rank - 1]
@@ -500,15 +564,7 @@ export default function CommSubspaceExplorer() {
           )
         })}
 
-        {/* ─── V2 scatter panel ─── */}
-        <circle
-          cx={V2_CX}
-          cy={V2_CY}
-          r={SCATTER_R}
-          fill="rgba(192,80,58,0.04)"
-          stroke="rgba(192,80,58,0.15)"
-          strokeWidth={1}
-        />
+        {/* ─── V2 3D isometric panel ─── */}
         <text
           x={V2_CX}
           y={V2_CY - SCATTER_R - 10}
@@ -524,7 +580,48 @@ export default function CommSubspaceExplorer() {
           V2 population
         </text>
 
-        {/* V2 actual points */}
+        {/* Negative axis stubs (dashed, faded) */}
+        {v2NegAxes.map(({ from, to }, i) => (
+          <line
+            key={`v2neg-${i}`}
+            x1={from[0]}
+            y1={from[1]}
+            x2={to[0]}
+            y2={to[1]}
+            stroke="rgba(192,80,58,0.2)"
+            strokeWidth={0.8}
+            strokeDasharray="3 3"
+          />
+        ))}
+
+        {/* Positive axis lines */}
+        {v2Axes.map(({ from, to, label }, i) => (
+          <g key={`v2axis-${i}`}>
+            <line
+              x1={from[0]}
+              y1={from[1]}
+              x2={to[0]}
+              y2={to[1]}
+              stroke="rgba(192,80,58,0.35)"
+              strokeWidth={1}
+            />
+            <text
+              x={to[0] + (to[0] - from[0]) * 0.15}
+              y={to[1] + (to[1] - from[1]) * 0.15}
+              textAnchor="middle"
+              dominantBaseline="central"
+              style={{
+                fontFamily: FONT,
+                fontSize: 8,
+                fill: "rgba(192,80,58,0.5)",
+              }}
+            >
+              {label}
+            </text>
+          </g>
+        ))}
+
+        {/* V2 actual points (faded red) */}
         {v2ActualScaled.map(([sx, sy], i) => (
           <circle
             key={`v2-${i}`}
@@ -532,20 +629,7 @@ export default function CommSubspaceExplorer() {
             cy={sy}
             r={2.5}
             fill={V2_RED}
-            opacity={0.35}
-          />
-        ))}
-
-        {/* V2 predicted points with error coloring */}
-        {currentPred.map(([sx, sy], i) => (
-          <circle
-            key={`v2p-${i}`}
-            cx={sx}
-            cy={sy}
-            r={3}
-            fill={errorColor(predErrors[i])}
-            opacity={0.8}
-            style={{ transition: "cx 0.3s ease, cy 0.3s ease" }}
+            opacity={0.3}
           />
         ))}
 
@@ -567,23 +651,18 @@ export default function CommSubspaceExplorer() {
           )
         })}
 
-        {/* Receiver subspace directions in V2 panel */}
-        {receiverDirs2d.slice(0, rank).map((dir, r) => {
-          const opacity = 0.25 + 0.55 * (sigmas[r] / sigmas[0])
-          return (
-            <line
-              key={`recv-${r}`}
-              x1={V2_CX - dir[0] * arrowLen}
-              y1={V2_CY + dir[1] * arrowLen}
-              x2={V2_CX + dir[0] * arrowLen}
-              y2={V2_CY - dir[1] * arrowLen}
-              stroke={TEAL}
-              strokeWidth={1.5}
-              opacity={opacity}
-              strokeDasharray="4 3"
-            />
-          )
-        })}
+        {/* V2 predicted points with error coloring */}
+        {currentPred.map(([sx, sy], i) => (
+          <circle
+            key={`v2p-${i}`}
+            cx={sx}
+            cy={sy}
+            r={3}
+            fill={errorColor(predErrors[i])}
+            opacity={0.8}
+            style={{ transition: "cx 0.3s ease, cy 0.3s ease" }}
+          />
+        ))}
 
         {/* ─── Communication arrows between panels ─── */}
         {Array.from({ length: rank }).map((_, r) => {
