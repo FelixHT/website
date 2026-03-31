@@ -86,8 +86,8 @@ const PSIDPost = () => {
           <h2 id="introduction">Introduction</h2>
 
           <p>
-            In the <Link to="/blog/cca">previous post</Link>, CCA gave us a way
-            to find shared linear structure between two datasets. We found weight
+            In the <Link to="/blog/cca/">CCA post</Link>, we found a way
+            to identify shared linear structure between two datasets. We found weight
             vectors that maximized the correlation between projections of paired
             observations, and used these to align neural recordings across
             subjects. But CCA treats each row of data as an independent
@@ -414,7 +414,7 @@ const PSIDPost = () => {
             PSID answers this question with a two-stage
             procedure <Citation numbers={1} />. The idea is to use CCA (the
             same whitening-and-SVD machinery from the{" "}
-            <Link to="/blog/cca">previous post</Link>) to find the part of the
+            <Link to="/blog/cca/">CCA post</Link>) to find the part of the
             neural state space that predicts future behavior, and then recover
             the remaining dynamics from the residual.
           </p>

@@ -123,8 +123,9 @@ const RRRPost = () => {
           />
 
           <p>
-            The solution is the least-squares estimate from
-            Post 4: <InlineMath tex="B = (X^\top X)^{-1} X^\top Y" />.
+            The solution is the least-squares
+            estimate: <InlineMath tex="B = (X^\top X)^{-1} X^\top Y" /> (the
+            normal equations from <Link to="/blog/least-squares/">Post 8</Link>).
             The coefficient matrix <InlineMath tex="B" /> is
             100-by-2. Each column is a decoder: a set of weights across
             all 100 neurons for one velocity component.

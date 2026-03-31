@@ -69,6 +69,12 @@ const CCAPost = () => {
               <span className="blog-post__byline-label">Reading time</span>
               <span className="blog-post__byline-value">{readingTime ? `${readingTime} min` : ""}</span>
             </div>
+            <div className="blog-post__byline-group">
+              <span className="blog-post__byline-label">Series</span>
+              <span className="blog-post__byline-value">
+                Linear Algebra for Neural Data, Part 9
+              </span>
+            </div>
           </div>
         </div>
 

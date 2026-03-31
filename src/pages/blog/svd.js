@@ -877,7 +877,7 @@ const SVDPost = () => {
 
           <p>
             <strong>CCA</strong>{" "}
-            (<Link to="/blog/cca/">Post 8</Link>). The canonical
+            (<Link to="/blog/cca/">Post 9</Link>). The canonical
             correlations are the singular values of the whitened
             cross-covariance matrix, and the canonical directions are
             its left and right singular vectors. CCA is an SVD after
@@ -886,7 +886,7 @@ const SVDPost = () => {
 
           <p>
             <strong>Procrustes alignment</strong>{" "}
-            (<Link to="/blog/procrustes-alignment/">Post 9</Link>). The
+            (<Link to="/blog/procrustes-alignment/">Post 10</Link>). The
             orthogonal matrix that best aligns one dataset to another
             comes from the SVD of their cross-product. If{" "}
             <InlineMath tex="X^\top Y = U\Sigma V^\top" />, the
@@ -898,7 +898,7 @@ const SVDPost = () => {
 
           <p>
             <strong>Reduced-rank regression</strong>{" "}
-            (<Link to="/blog/rrr-dpca/">Post 10</Link>). The optimal
+            (<Link to="/blog/rrr-dpca/">Post 11</Link>). The optimal
             low-rank predictor comes from the SVD of the regression
             coefficient matrix, constrained to a low-dimensional
             subspace.
