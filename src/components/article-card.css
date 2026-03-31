@@ -112,6 +112,10 @@
   transform: translateX(3px);
 }
 
+.article-card-header + .article-card-footer {
+  border-top: none;
+}
+
 @media (max-width: 768px) {
   .article-card-title {
     font-size: 1.25rem;

@@ -37,6 +37,16 @@ pids
 *.seed
 *.pid.lock
 
+# Draft posts (future/unpublished)
+drafts/
+
+# Next.js (not used, but prevent accidental commits)
+.next/
+
+# Snapshot artifacts
+snap-*.md
+snapshot-*.md
+
 # Superpowers
 .superpowers/
 .worktrees/

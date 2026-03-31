@@ -5,6 +5,7 @@ import SpotlightCard from "../components/SpotlightCard"
 import ArticleCard from "../components/ArticleCard"
 import SpotlightCardAlt from "../components/SpotlightCardAlt"
 import CCATeaser from "../components/blog/CCATeaser"
+import SpikeRasterBackground from "../components/SpikeRasterBackground"
 import "./index.css"
 
 const IndexPage = () => {
@@ -172,7 +173,7 @@ const IndexPage = () => {
           <span className="section-divider-label">Research notes</span>
         </div>
 
-        {/* Blog section */}
+        {/* Research notes */}
         <div className="two-column-layout">
           <div className="spotlight-column">
             <Link to="/blog/cca/" style={{ textDecoration: "none", color: "inherit" }}>
@@ -212,20 +213,11 @@ const IndexPage = () => {
             <ArticleCard
               title="Preferential Subspace Identification"
               author="Dimensionality Reduction"
-              description="Recovering latent dynamics from neural recordings and separating behaviorally relevant from irrelevant structure, derived from scratch."
+              description="Recovering latent dynamics from neural recordings and separating behaviorally relevant from irrelevant structure."
               tag="March 2026"
               link="/blog/psid/"
               borderColor="#4A90D9"
               headerBgColor="rgba(74, 144, 217, 0.12)"
-            />
-            <ArticleCard
-              title="Latent Factor Analysis via Dynamical Systems"
-              author="Dimensionality Reduction"
-              description="Inferring single-trial neural dynamics with a deep generative model, derived from scratch with interactive figures."
-              tag="March 2026"
-              link="/blog/lfads/"
-              borderColor="#7b68ae"
-              headerBgColor="rgba(123, 104, 174, 0.12)"
             />
             <ArticleCard
               title="Neuroscience Keeps Solving the Same Problems Twice"
@@ -236,6 +228,50 @@ const IndexPage = () => {
               borderColor="#7a6fa0"
               headerBgColor="rgba(122, 111, 160, 0.12)"
             />
+          </div>
+        </div>
+
+        {/* Linear Algebra Series — full-width section */}
+        <div className="series-section">
+          <SpikeRasterBackground />
+          <div className="series-section__inner">
+            <div className="series-section__meta">
+              <div className="spotlight-card__label" style={{
+                color: "#fff",
+                backgroundColor: "black",
+                border: "1px solid black"
+              }}>Linear Algebra</div>
+              <div className="spotlight-card__issue" style={{
+                color: "black",
+                backgroundColor: "transparent",
+                border: "1px solid black"
+              }}>for Neural Data</div>
+            </div>
+            <div className="series-grid">
+              {[
+                { title: "Vectors and neural geometry", author: "Representing neural populations as points in a shared space.", link: "/blog/vectors-geometry/", part: 1 },
+                { title: "Bases and coordinates", author: "The neural state is the object. Coordinates are just a description.", link: "/blog/bases-coordinates/", part: 2 },
+                { title: "Matrices as linear maps", author: "A matrix is not a grid of numbers. It is a rule that turns one vector into another.", link: "/blog/matrices-linear-maps/", part: 3 },
+                { title: "Subspaces, rank, and projection", author: "Column spaces, null spaces, and what a linear map preserves and destroys.", link: "/blog/subspaces-rank-projection/", part: 4 },
+                { title: "Eigenvectors and covariance", author: "Finding the directions a transformation leaves alone.", link: "/blog/eigenvectors-covariance/", part: 5 },
+                { title: "The singular value decomposition", author: "One factorization behind most of neural data analysis.", link: "/blog/svd/", part: 6 },
+                { title: "Principal component analysis", author: "Variance maximization and low-rank approximation turn out to be the same problem.", link: "/blog/pca/", part: 7 },
+                { title: "Canonical correlation analysis", author: "Finding shared structure between two high-dimensional datasets.", link: "/blog/cca/", part: 8 },
+                { title: "Procrustes and hyperalignment", author: "Aligning neural representations across subjects.", link: "/blog/procrustes-alignment/", part: 9 },
+                { title: "Reduced-rank regression and dPCA", author: "Predicting one population's activity from another through a low-rank bottleneck.", link: "/blog/rrr-dpca/", part: 10 },
+              ].map((entry) => (
+                <ArticleCard
+                  key={entry.part}
+                  title={entry.title}
+                  author={entry.author}
+                  tag="March 2026"
+                  year={`Part ${entry.part}`}
+                  link={entry.link}
+                  borderColor="#8BA888"
+                  headerBgColor="rgba(168, 186, 164, 0.25)"
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>

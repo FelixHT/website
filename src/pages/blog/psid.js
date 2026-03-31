@@ -778,14 +778,6 @@ const PSIDPost = () => {
             interpretable.
           </p>
 
-          <p>
-            The next post in this series moves from linear to nonlinear
-            dynamics: <Link to="/blog/lfads/">Latent Factor Analysis via
-            Dynamical Systems</Link> uses a deep generative model to infer
-            single-trial neural dynamics, capturing the trial-to-trial
-            variability that linear methods like PSID average away.
-          </p>
-
           <h2 id="implementation">Implementation</h2>
 
           <p>

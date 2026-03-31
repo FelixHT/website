@@ -54,7 +54,7 @@ const CCAPost = () => {
       <article className="blog-post">
         <div className="blog-post__header">
           <h1 className="blog-post__title">
-            Canonical Correlation Analysis
+            Canonical correlation analysis
           </h1>
           <p className="blog-post__subtitle">
             Finding shared structure between two high-dimensional datasets, derived from scratch with interactive figures.
@@ -104,15 +104,16 @@ const CCAPost = () => {
           </p>
 
           <p>
-            Here is a concrete example. You've recorded neural populations from
-            two monkeys performing the same reaching task. Each gives you a matrix
-            of activity, dozens of neurons over thousands of timepoints. You could
-            correlate individual neurons across recordings, one pair at a time, but
-            neural populations encode information in patterns of activity, and no
-            single neuron tells the full story. What you really want is to
-            find <em>weighted combinations</em> of neurons in each recording that
-            move together. CCA does this: it finds the linear projections of each
-            dataset that are maximally correlated with each other. Safaie, Chang
+            Suppose you record neural populations from two monkeys
+            performing the same reaching task. Each gives you a matrix
+            of activity, dozens of neurons over thousands of timepoints.
+            You could correlate individual neurons across recordings,
+            one pair at a time, but neural populations encode
+            information in patterns of activity. You want
+            to find <em>weighted combinations</em> of neurons in each
+            recording that move together. CCA finds the linear
+            projections of each dataset that are maximally correlated
+            with each other. Safaie, Chang
             et al. <Citation numbers={7} /> used CCA to answer this question,
             aligning low-dimensional neural trajectories across monkeys and across
             mice to show that the underlying dynamics are preserved.
@@ -446,9 +447,9 @@ const CCAPost = () => {
           </FigureContainer>
 
           <p>
-            This is not a theoretical curiosity. In neural data, 200 neurons
-            recorded over 50 trials puts you deep in the danger zone. How do
-            you know which canonical correlations are real?
+            In neural data, 200 neurons recorded over 50 trials puts
+            you squarely in this regime. How do you know which canonical
+            correlations are real?
           </p>
 
           <p>
@@ -747,7 +748,7 @@ def cca(X, Y):
 }
 
 export const Head = () => (
-  <title>Canonical Correlation Analysis — Felix Taschbach</title>
+  <title>Canonical correlation analysis — Felix Taschbach</title>
 )
 
 export default CCAPost

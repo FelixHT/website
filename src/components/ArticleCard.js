@@ -1,5 +1,5 @@
 import React from "react"
-// import { Link } from "gatsby"
+import { Link } from "gatsby"
 import "./article-card.css"
 
 const ArticleCard = ({
@@ -27,18 +27,26 @@ const ArticleCard = ({
             color: headerFontColor ? headerFontColor : undefined
           }}>{author}</p>
         </div>
-        <div className="article-card-content">
-          <p className="article-card-description">
-            {description}
-          </p>
-        </div>
+        {description && (
+          <div className="article-card-content">
+            <p className="article-card-description">
+              {description}
+            </p>
+          </div>
+        )}
         <div className="article-card-footer">
           <span className="article-card-tag">{tag}</span>
           {year && <span className="article-card-tag">{year}</span>}
           {link && (
-            <a href={link} className="article-card-readmore-link" target="_blank" rel="noopener noreferrer" aria-label={`Read article: ${title}`}>
-              <span className="article-card-readmore">Read more →</span>
-            </a>
+            link.startsWith("/") ? (
+              <Link to={link} className="article-card-readmore-link" aria-label={`Read article: ${title}`}>
+                <span className="article-card-readmore">Read more →</span>
+              </Link>
+            ) : (
+              <a href={link} className="article-card-readmore-link" target="_blank" rel="noopener noreferrer" aria-label={`Read article: ${title}`}>
+                <span className="article-card-readmore">Read more →</span>
+              </a>
+            )
           )}
         </div>
       </div>
