@@ -16,6 +16,7 @@ import PermutationTest from "../../components/blog/PermutationTest"
 import VariableLegend from "../../components/blog/VariableLegend"
 import "../../components/blog/prism-theme.css"
 import "./blog-post.css"
+import SeriesNav from "../../components/SeriesNav"
 
 const CCA_LEGEND_GROUPS = [
   { color: "#4A90D9", label: "Dataset A", vars: ["X_a", "w_a", "\\Sigma_{aa}"] },
@@ -609,14 +610,14 @@ def cca(X, Y):
           </p>
 
           <p>
-            These limitations point directly to the methods covered in
-            the next post in this series:{" "}
-            <Link to="/blog/psid/">Preferential Subspace Identification</Link>{" "}
-            extends CCA to the time-series setting, replacing the static
-            cross-covariance with time-lagged Hankel matrices and adding
-            a behavioral relevance criterion. Beyond PSID, nonlinear extensions,
-            probabilistic formulations, and approaches that relax the pairing
-            requirement build on the same CCA foundation.
+            These limitations point directly to several
+            extensions. <Link to="/blog/psid/">Preferential Subspace
+            Identification</Link> extends CCA to the time-series setting,
+            replacing the static cross-covariance with time-lagged Hankel
+            matrices and adding a behavioral relevance criterion.
+            Nonlinear extensions, probabilistic formulations, and
+            approaches that relax the pairing requirement all build on
+            the same CCA foundation.
           </p>
 
           <h2 id="neighbors">CCA and its neighbors</h2>
@@ -678,10 +679,11 @@ def cca(X, Y):
             prediction (RRR) depends on what you care about. CCA gives you
             paired linear directions with temporal correspondence, which is
             exactly what cross-animal alignment needs.
-            The <Link to="/blog/psid/">next post</Link> shows how PSID
-            extends CCA to dynamical systems by replacing static
-            cross-covariance with time-lagged structure and adding a
-            behavioral relevance criterion.
+            The <Link to="/blog/procrustes-alignment/">next
+            post</Link> in this series takes the alignment problem in a
+            different direction: given two neural populations observing
+            the same stimuli, find the rotation that best aligns their
+            representations.
           </p>
 
           <h2 id="references">References</h2>
@@ -735,6 +737,8 @@ def cca(X, Y):
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={9} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">

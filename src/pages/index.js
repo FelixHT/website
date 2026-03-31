@@ -256,9 +256,10 @@ const IndexPage = () => {
                 { title: "Eigenvectors and covariance", author: "Finding the directions a transformation leaves alone.", link: "/blog/eigenvectors-covariance/", part: 5 },
                 { title: "The singular value decomposition", author: "One factorization behind most of neural data analysis.", link: "/blog/svd/", part: 6 },
                 { title: "Principal component analysis", author: "Variance maximization and low-rank approximation turn out to be the same problem.", link: "/blog/pca/", part: 7 },
-                { title: "Canonical correlation analysis", author: "Finding shared structure between two high-dimensional datasets.", link: "/blog/cca/", part: 8 },
-                { title: "Procrustes and hyperalignment", author: "Aligning neural representations across subjects.", link: "/blog/procrustes-alignment/", part: 9 },
-                { title: "Reduced-rank regression and dPCA", author: "Predicting one population's activity from another through a low-rank bottleneck.", link: "/blog/rrr-dpca/", part: 10 },
+                { title: "Least squares and regularization", author: "Why the best-fitting decoder is usually the worst one to use.", link: "/blog/least-squares/", part: 8 },
+                { title: "Canonical correlation analysis", author: "Finding shared structure between two high-dimensional datasets.", link: "/blog/cca/", part: 9 },
+                { title: "Procrustes and hyperalignment", author: "Aligning neural representations across subjects.", link: "/blog/procrustes-alignment/", part: 10 },
+                { title: "Reduced-rank regression and dPCA", author: "Predicting one population's activity from another through a low-rank bottleneck.", link: "/blog/rrr-dpca/", part: 11 },
               ].map((entry) => (
                 <ArticleCard
                   key={entry.part}

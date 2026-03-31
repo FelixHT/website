@@ -15,6 +15,7 @@ import NeuralBasisChange from "../../components/blog/NeuralBasisChange"
 import PCAReveal from "../../components/blog/PCAReveal"
 import PCAFailureModesExplorer from "../../components/blog/PCAFailureModesExplorer"
 import CodeBlock from "../../components/blog/CodeBlock"
+import SeriesNav from "../../components/SeriesNav"
 
 const TOC_ITEMS = [
   { id: "the-question", label: "The question PCA answers" },
@@ -557,32 +558,24 @@ const PCAPost = () => {
           <h2 id="what-comes-next">What comes next</h2>
 
           <p>
-            PCA is a single-dataset method. It finds the subspace of
-            maximum variance within one population. But many questions
-            in neuroscience involve two datasets: neural activity and
-            behavior, two brain regions, two animals performing the same
-            task. For those questions, you want the projections of the
-            two datasets to be aligned, correlated, or predictive of
-            each other.
+            PCA finds the best subspace for representing a single
+            dataset. But PCA's decoder — the least-squares readout from
+            PC scores back to neural activity — has a problem: the
+            best-fitting decoder is usually the worst one to use on new
+            data. It overfits. The coefficients blow up whenever two
+            dimensions are correlated, which in neural data they almost
+            always are.
           </p>
 
           <p>
-            That is the territory of CCA, Procrustes alignment, and
-            reduced-rank regression. CCA replaces "maximize variance"
-            with "maximize cross-dataset correlation." Procrustes
-            replaces "find the best subspace" with "find the best
-            rotation aligning one dataset to another." Reduced-rank
-            regression replaces "capture variance" with "predict a
-            target."
-          </p>
-
-          <p>
-            All three use the same tools: covariance matrices,
-            eigendecomposition, the SVD. They differ in which matrix
-            you decompose and what criterion you optimize.
-            The <Link to="/blog/cca/">next post</Link> derives CCA and
-            shows how whitening, SVD, and cross-covariance combine to
-            find shared linear structure between two neural datasets.
+            The fix is regularization. Ridge regression, the lasso, and
+            their relatives add a penalty on the size of the
+            coefficients. The result is a decoder that fits slightly
+            worse in-sample but generalizes far better out-of-sample.
+            The geometry of regularization — why it shrinks some
+            directions and not others, how the penalty interacts with
+            the covariance structure of the data — is the subject of
+            the <Link to="/blog/least-squares/">next post</Link>.
           </p>
 
           <h2 id="implementation">Implementation</h2>
@@ -700,6 +693,8 @@ print(f"Relative reconstruction error (k=10): {error:.3f}")`} />
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={7} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">

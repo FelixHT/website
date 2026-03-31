@@ -14,6 +14,7 @@ import RRRExplorer from "../../components/blog/RRRExplorer"
 import CommSubspaceExplorer from "../../components/blog/CommSubspaceExplorer"
 import DPCADemixingExplorer from "../../components/blog/DPCADemixingExplorer"
 import TDRExplorer from "../../components/blog/TDRExplorer"
+import SeriesNav from "../../components/SeriesNav"
 
 const TOC_ITEMS = [
   { id: "the-asymmetry", label: "The asymmetry" },
@@ -64,7 +65,7 @@ const RRRPost = () => {
             <div className="blog-post__byline-group">
               <span className="blog-post__byline-label">Series</span>
               <span className="blog-post__byline-value">
-                Linear Algebra for Neural Data, Part 10
+                Linear Algebra for Neural Data, Part 11
               </span>
             </div>
           </div>
@@ -516,7 +517,7 @@ const RRRPost = () => {
           </p>
 
           <p>
-            <strong>CCA</strong> (<Link to="/blog/cca/">Post 8</Link>):
+            <strong>CCA</strong> (<Link to="/blog/cca/">Post 9</Link>):
             maximize correlation between projections
             of <InlineMath tex="X" /> and{" "}
             <InlineMath tex="Y" />. Symmetric between the two datasets.
@@ -524,7 +525,7 @@ const RRRPost = () => {
 
           <p>
             <strong>Procrustes</strong>{" "}
-            (<Link to="/blog/procrustes-alignment/">Post 9</Link>):
+            (<Link to="/blog/procrustes-alignment/">Post 10</Link>):
             minimize distance between <InlineMath tex="X" /> and a
             rotated version of <InlineMath tex="Y" />. Symmetric, with
             a geometric constraint (orthogonality).
@@ -764,6 +765,8 @@ for k in [1, 2, 3, 5, 10]:
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={11} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">

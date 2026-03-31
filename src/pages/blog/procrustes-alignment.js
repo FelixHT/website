@@ -14,6 +14,7 @@ import ProcrustesExplorer from "../../components/blog/ProcrustesExplorer"
 import FrobeniusNormExplorer from "../../components/blog/FrobeniusNormExplorer"
 import HyperalignmentExplorer from "../../components/blog/HyperalignmentExplorer"
 import SRMFactorizationExplorer from "../../components/blog/SRMFactorizationExplorer"
+import SeriesNav from "../../components/SeriesNav"
 
 const TOC_ITEMS = [
   { id: "the-alignment-problem", label: "The alignment problem" },
@@ -63,7 +64,7 @@ const ProcrustesAlignmentPost = () => {
             <div className="blog-post__byline-group">
               <span className="blog-post__byline-label">Series</span>
               <span className="blog-post__byline-value">
-                Linear Algebra for Neural Data, Part 9
+                Linear Algebra for Neural Data, Part 10
               </span>
             </div>
           </div>
@@ -801,6 +802,8 @@ print(f"Mean correlation per dim: {np.mean(corrs):.3f}")`} />
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={10} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">
