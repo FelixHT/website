@@ -13,6 +13,7 @@ import MatrixVectorExplorer from "../../components/blog/MatrixVectorExplorer"
 import TransformationExplorer from "../../components/blog/TransformationExplorer"
 import MatrixMultiplicationExplorer from "../../components/blog/MatrixMultiplicationExplorer"
 import InverseExplorer from "../../components/blog/InverseExplorer"
+import SeriesNav from "../../components/SeriesNav"
 
 const TOC_ITEMS = [
   { id: "decoding-a-reach", label: "Decoding a reach" },
@@ -678,6 +679,8 @@ Ab_1 & Ab_2 & \\cdots & Ab_p \\\\[-4pt]
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={3} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">

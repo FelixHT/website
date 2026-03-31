@@ -14,6 +14,7 @@ import LinearCombinationBuilder from "../../components/blog/LinearCombinationBui
 import SpanExplorer from "../../components/blog/SpanExplorer"
 import DotProductExplorer from "../../components/blog/DotProductExplorer"
 import NormBallExplorer from "../../components/blog/NormBallExplorer"
+import SeriesNav from "../../components/SeriesNav"
 
 const TOC_ITEMS = [
   { id: "a-hundred-neurons", label: "Population vectors" },
@@ -693,6 +694,8 @@ const VectorsGeometryPost = () => {
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={1} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">

@@ -15,6 +15,7 @@ import OuterProductExplorer from "../../components/blog/OuterProductExplorer"
 import EigenExplorer from "../../components/blog/EigenExplorer"
 import CovarianceEllipseExplorer from "../../components/blog/CovarianceEllipseExplorer"
 import SpectralTheoremExplorer from "../../components/blog/SpectralTheoremExplorer"
+import SeriesNav from "../../components/SeriesNav"
 
 const TOC_ITEMS = [
   { id: "simple-directions", label: "Directions that stay put" },
@@ -563,16 +564,16 @@ x_{t,2}\\, x_{t,1} & x_{t,2}^2 \\end{bmatrix}`}
             which gives{" "}
             <InlineMath tex="\lambda^2 - 13\lambda + 27 = 0" />.
             The eigenvalues
-            are <InlineMath tex="\lambda_1 \approx 10.3" /> and{" "}
-            <InlineMath tex="\lambda_2 \approx 2.7" />.
+            are <InlineMath tex="\lambda_1 = \tfrac{13 + \sqrt{61}}{2} \approx 10.41" /> and{" "}
+            <InlineMath tex="\lambda_2 = \tfrac{13 - \sqrt{61}}{2} \approx 2.59" />.
           </p>
 
           <p>
-            Check: <InlineMath tex="10.3 + 2.7 = 13" />, which is
+            Check: <InlineMath tex="10.41 + 2.59 = 13" />, which is
             the trace (total variance). The eigenvalues split the total
             variance into two perpendicular components. The first
-            eigenvector direction captures 10.3 out of 13 units of
-            variance. The second captures 2.7. Most of the action is
+            eigenvector direction captures 10.41 out of 13 units of
+            variance. The second captures 2.59. Most of the action is
             along one direction.
           </p>
 
@@ -764,6 +765,8 @@ x_{t,2}\\, x_{t,1} & x_{t,2}^2 \\end{bmatrix}`}
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={5} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">

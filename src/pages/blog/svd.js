@@ -17,6 +17,7 @@ import EckartYoungExplorer from "../../components/blog/EckartYoungExplorer"
 import LowRankApproximation from "../../components/blog/LowRankApproximation"
 import PseudoinverseExplorer from "../../components/blog/PseudoinverseExplorer"
 import SVDUnifiesAll from "../../components/blog/SVDUnifiesAll"
+import SeriesNav from "../../components/SeriesNav"
 
 const TOC_ITEMS = [
   { id: "what-does-a-matrix-do-to-a-circle", label: "What a matrix does to a circle" },
@@ -1132,6 +1133,8 @@ print(f"X shape: {X.shape}, X+ shape: {X_pinv.shape}")
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={6} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">

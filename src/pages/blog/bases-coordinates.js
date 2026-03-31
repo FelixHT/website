@@ -13,6 +13,7 @@ import BasisDecomposition from "../../components/blog/BasisDecomposition"
 import ChangeOfBasisExplorer from "../../components/blog/ChangeOfBasisExplorer"
 import GramSchmidtExplorer from "../../components/blog/GramSchmidtExplorer"
 import NeuralBasisChange from "../../components/blog/NeuralBasisChange"
+import SeriesNav from "../../components/SeriesNav"
 
 const TOC_ITEMS = [
   { id: "same-state-different-descriptions", label: "The same data, different descriptions" },
@@ -715,6 +716,8 @@ const BasesCoordinatesPost = () => {
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={2} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">

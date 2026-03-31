@@ -13,6 +13,7 @@ import ColumnNullSpaceExplorer from "../../components/blog/ColumnNullSpaceExplor
 import FourSubspacesExplorer from "../../components/blog/FourSubspacesExplorer"
 import SubspaceProjectionExplorer from "../../components/blog/SubspaceProjectionExplorer"
 import NullSpaceMotorCortex from "../../components/blog/NullSpaceMotorCortex"
+import SeriesNav from "../../components/SeriesNav"
 
 const TOC_ITEMS = [
   { id: "what-gets-destroyed", label: "What gets destroyed" },
@@ -675,6 +676,8 @@ const SubspacesRankProjectionPost = () => {
             </li>
           </ol>
         </div>
+
+        <SeriesNav part={4} />
 
         <div className="blog-post__footer-sep"></div>
         <div className="blog-post__back">
