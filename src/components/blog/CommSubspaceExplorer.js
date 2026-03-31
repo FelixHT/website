@@ -547,7 +547,7 @@ export default function CommSubspaceExplorer() {
         ))}
 
         {/* Sender subspace directions in V1 panel */}
-        {senderDirs2d.slice(0, rank).map((dir, r) => {
+        {senderDirs2d.slice(0, Math.min(rank, 2)).map((dir, r) => {
           const opacity = 0.25 + 0.55 * (sigmas[r] / sigmas[0])
           return (
             <line
