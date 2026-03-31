@@ -1,21 +1,25 @@
 import React, { useState, useMemo } from "react"
 
 /* ─── Layout ─── */
-const W = 600
-const H = 300
-const PANEL_W = 270
-const PANEL_H = 260
-const PAD_X = 15   // left edge of first panel
-const PAD_Y = 20   // top edge of panels
-const GAP = 30     // gap between panels
-const P2_X = PAD_X + PANEL_W + GAP  // left edge of second panel
+const W = 700
+const H = 350
+const PANEL_W = 280
+const TRACE_H = 55
+const TRACE_GAP = 10
+const PAD_X = 30
+const PAD_Y = 28
+const GAP = 50
+const P2_X = PAD_X + PANEL_W + GAP
+const CHANNELS_SHOWN = [0, 2, 4]
 
 /* ─── Colors ─── */
 const TEAL = "#4A7C6F"
 const BLUE = "#3d6cb9"
+const RED = "#c0503a"
 const FONT = "var(--font-mono, monospace)"
-const AXIS_COLOR = "rgba(0,0,0,0.15)"
+const AXIS_COLOR = "rgba(0,0,0,0.12)"
 const BG_COLOR = "rgba(0,0,0,0.03)"
+const SIGNAL_COLOR = "rgba(0,0,0,0.25)"
 
 /* ─── Seeded PRNG (mulberry32) ─── */
 function mulberry32(seed) {
@@ -28,7 +32,6 @@ function mulberry32(seed) {
   }
 }
 
-/* ─── Box-Muller normal samples ─── */
 function randn(rng) {
   const u1 = rng()
   const u2 = rng()
@@ -37,107 +40,74 @@ function randn(rng) {
   return [r * Math.cos(theta), r * Math.sin(theta)]
 }
 
-/* ─── Matrix helpers (dense, row-major arrays of arrays) ─── */
+/* ─── Matrix / vector helpers ─── */
 function matVec(M, v) {
-  // M: rows×cols, v: cols
   return M.map(row => row.reduce((s, a, j) => s + a * v[j], 0))
 }
-
-function matTmat(A) {
-  // returns A^T A, A is rows×cols
-  const rows = A.length
-  const cols = A[0].length
-  const R = Array.from({ length: cols }, () => new Array(cols).fill(0))
-  for (let i = 0; i < rows; i++) {
-    for (let j = 0; j < cols; j++) {
-      for (let k = 0; k < cols; k++) {
-        R[j][k] += A[i][j] * A[i][k]
-      }
-    }
-  }
-  return R
-}
-
 function dot(a, b) {
   return a.reduce((s, v, i) => s + v * b[i], 0)
 }
-
 function vecScale(a, s) {
   return a.map(v => v * s)
 }
-
 function vecSub(a, b) {
   return a.map((v, i) => v - b[i])
 }
-
 function norm(a) {
   return Math.sqrt(dot(a, a))
 }
-
 function normalize(a) {
   const n = norm(a)
   return n < 1e-12 ? a : a.map(v => v / n)
 }
 
-/* ─── Power iteration to find top-k eigenvectors of a symmetric matrix ─── */
+/* ─── Power iteration: top-k eigenvectors of symmetric matrix ─── */
 function topKEigenvectors(M, k, rng) {
   const n = M.length
   const vecs = []
-
   for (let ei = 0; ei < k; ei++) {
-    // Random start
     let v = Array.from({ length: n }, () => rng() - 0.5)
     v = normalize(v)
-
-    // Deflate against already-found eigenvectors
-    for (let iter = 0; iter < 200; iter++) {
+    for (let iter = 0; iter < 300; iter++) {
       let w = matVec(M, v)
-      // Deflate
       for (const prev of vecs) {
-        const proj = dot(w, prev)
-        w = vecSub(w, vecScale(prev, proj))
+        w = vecSub(w, vecScale(prev, dot(w, prev)))
       }
-      const wNorm = norm(w)
-      if (wNorm < 1e-14) break
-      v = vecScale(w, 1 / wNorm)
+      const wn = norm(w)
+      if (wn < 1e-14) break
+      v = vecScale(w, 1 / wn)
     }
-
-    // One final deflation pass
     for (const prev of vecs) {
-      const proj = dot(v, prev)
-      v = vecSub(v, vecScale(prev, proj))
+      v = vecSub(v, vecScale(prev, dot(v, prev)))
     }
     v = normalize(v)
     vecs.push(v)
   }
-
-  return vecs // array of k eigenvectors (each length-n array)
+  return vecs
 }
 
-/* ─── Generate all simulation data (seeded, deterministic) ─── */
+/* ─── Generate data once ─── */
 function generateData() {
   const rng = mulberry32(2026)
-
   const T = 100
-  // True 2D latent system: A = [[0.98, -0.2], [0.2, 0.98]]
-  const A = [[0.98, -0.2], [0.2, 0.98]]
-  // Generate true latent trajectory
+  const T_TRAIN = 50
+
+  // Latent dynamics: damped rotation
+  const A = [[0.95, -0.2], [0.2, 0.95]]
   const xTrue = [[1, 0]]
   for (let t = 1; t < T; t++) {
-    const prev = xTrue[t - 1]
-    xTrue.push(matVec(A, prev))
+    xTrue.push(matVec(A, xTrue[t - 1]))
   }
 
-  // Observation matrix C: 6×2 random
+  // 6x2 observation matrix (scaled up so signal dominates)
   const C = Array.from({ length: 6 }, () => {
     const [a, b] = randn(rng)
-    return [a, b]
+    return [a * 2, b * 2]
   })
 
-  // Noise std = 0.15
-  const NOISE_STD = 0.15
+  const NOISE_STD = 0.3
 
-  // Observations Y: T×6
+  // Noisy observations
   const Y = xTrue.map(x => {
     const cx = matVec(C, x)
     return cx.map(v => {
@@ -146,249 +116,194 @@ function generateData() {
     })
   })
 
-  // Center Y column-wise
-  const means = Array(6).fill(0)
+  // True noiseless signal
+  const Y_signal = xTrue.map(x => matVec(C, x))
+
+  // Train / test split
+  const Y_train = Y.slice(0, T_TRAIN)
+  const Y_test = Y.slice(T_TRAIN)
+  const Y_signal_test = Y_signal.slice(T_TRAIN)
+
+  // Training mean
+  const meanTrain = Array(6).fill(0)
   for (let j = 0; j < 6; j++) {
-    for (let t = 0; t < T; t++) means[j] += Y[t][j]
-    means[j] /= T
+    for (let t = 0; t < T_TRAIN; t++) meanTrain[j] += Y_train[t][j]
+    meanTrain[j] /= T_TRAIN
   }
-  const Yc = Y.map(row => row.map((v, j) => v - means[j]))
 
-  // Compute Y^T Y (6×6 covariance matrix)
-  const YtY = matTmat(Yc)
+  // Centered training data
+  const Yc_train = Y_train.map(row => row.map((v, j) => v - meanTrain[j]))
 
-  return { xTrue, Yc, YtY, T }
+  // Centered test data (using training mean)
+  const Yc_test = Y_test.map(row => row.map((v, j) => v - meanTrain[j]))
+
+  // Training covariance Y_train^T Y_train
+  const n = 6
+  const YtY = Array.from({ length: n }, () => new Array(n).fill(0))
+  for (let i = 0; i < T_TRAIN; i++) {
+    for (let j = 0; j < n; j++) {
+      for (let k = 0; k < n; k++) {
+        YtY[j][k] += Yc_train[i][j] * Yc_train[i][k]
+      }
+    }
+  }
+
+  // Signal mean on test (for R² denominator)
+  const signalMeanTest = Array(6).fill(0)
+  for (let j = 0; j < 6; j++) {
+    for (let t = 0; t < Y_signal_test.length; t++) {
+      signalMeanTest[j] += Y_signal_test[t][j]
+    }
+    signalMeanTest[j] /= Y_signal_test.length
+  }
+
+  return {
+    Yc_test,
+    Y_signal_test,
+    YtY,
+    meanTrain,
+    signalMeanTest,
+  }
 }
 
 const SIM = generateData()
 
-/* ─── Procrustes: find scale+rotation R (2×2) minimizing ||X_true - X_rec R||_F
-       X_true: T×2, X_rec: T×2
-       Returns recovered trajectory after aligning to true ─── */
-function procrustesAlign(xTrue2, xRec2) {
-  const T = xTrue2.length
-  // Compute cross-covariance M = X_rec^T X_true (2×2)
-  const M = [[0, 0], [0, 0]]
-  for (let t = 0; t < T; t++) {
-    for (let i = 0; i < 2; i++) {
-      for (let j = 0; j < 2; j++) {
-        M[i][j] += xRec2[t][i] * xTrue2[t][j]
-      }
-    }
-  }
-  // SVD of 2×2 matrix M = U S V^T (analytic)
-  // Use the standard formula for 2×2 SVD via the symmetric eigendecomposition trick
-  // M^T M = V S^2 V^T
-  const MtM = [
-    [M[0][0] * M[0][0] + M[1][0] * M[1][0], M[0][0] * M[0][1] + M[1][0] * M[1][1]],
-    [M[0][1] * M[0][0] + M[1][1] * M[1][0], M[0][1] * M[0][1] + M[1][1] * M[1][1]],
-  ]
-  // Eigendecomposition of 2×2 symmetric MtM
-  const tr = MtM[0][0] + MtM[1][1]
-  const det = MtM[0][0] * MtM[1][1] - MtM[0][1] * MtM[1][0]
-  const disc = Math.sqrt(Math.max(0, (tr * tr) / 4 - det))
-  const lam1 = tr / 2 + disc
-  const lam2 = tr / 2 - disc
-  const s1 = Math.sqrt(Math.max(0, lam1))
-  const s2 = Math.sqrt(Math.max(0, lam2))
+/* ─── Reconstruct and score for a given d ─── */
+function reconstruct(d) {
+  const { Yc_test, Y_signal_test, YtY, meanTrain, signalMeanTest } = SIM
+  const T_TEST = Y_signal_test.length
 
-  // V eigenvectors of MtM
-  let v1, v2
-  if (Math.abs(MtM[0][1]) > 1e-12) {
-    v1 = normalize([lam1 - MtM[1][1], MtM[0][1]])
-    v2 = [-v1[1], v1[0]]
-  } else {
-    v1 = MtM[0][0] >= MtM[1][1] ? [1, 0] : [0, 1]
-    v2 = [-v1[1], v1[0]]
-  }
-
-  // U = M V S^{-1}
-  const u1 = s1 > 1e-12
-    ? normalize([M[0][0] * v1[0] + M[0][1] * v1[1], M[1][0] * v1[0] + M[1][1] * v1[1]])
-    : [1, 0]
-  const u2 = s2 > 1e-12
-    ? normalize([M[0][0] * v2[0] + M[0][1] * v2[1], M[1][0] * v2[0] + M[1][1] * v2[1]])
-    : [-u1[1], u1[0]]
-
-  // Orthogonal R = U V^T  (best rotation, no reflection)
-  // R = U V^T where det check ensures rotation not reflection
-  // R[i][j] = sum_k U[i][k] V[j][k]
-  const R = [
-    [u1[0] * v1[0] + u2[0] * v2[0], u1[0] * v1[1] + u2[0] * v2[1]],
-    [u1[1] * v1[0] + u2[1] * v2[0], u1[1] * v1[1] + u2[1] * v2[1]],
-  ]
-
-  // Apply R: aligned[t] = xRec2[t] @ R
-  return xRec2.map(r => [
-    r[0] * R[0][0] + r[1] * R[1][0],
-    r[0] * R[0][1] + r[1] * R[1][1],
-  ])
-}
-
-/* ─── Recover latent states via PCA on Y for a given number of dimensions ─── */
-function recoverStates(d) {
-  const { Yc, YtY, T, xTrue } = SIM
-
-  // Use a fixed RNG for power iteration (separate from data generation)
   const iterRng = mulberry32(999)
   const eigvecs = topKEigenvectors(YtY, d, iterRng)
-  // eigvecs: d eigenvectors each of length 6
 
-  // Project each observation: score[t] = [dot(Yc[t], eigvecs[0]), ..., dot(Yc[t], eigvecs[d-1])]
-  const scores = Yc.map(row =>
-    eigvecs.map(ev => dot(row, ev))
-  )
+  // Reconstruct test data: project onto d PCA axes, map back + add mean
+  const Y_recon = Yc_test.map(row => {
+    const recon = new Array(6).fill(0)
+    for (const ev of eigvecs) {
+      const score = dot(row, ev)
+      for (let j = 0; j < 6; j++) recon[j] += score * ev[j]
+    }
+    return recon.map((v, j) => v + meanTrain[j])
+  })
 
-  // Take first 2 components for the 2D plot
-  const scores2D = scores.map(s => [s[0] ?? 0, s[1] ?? 0])
+  // Denoising R²: how well does reconstruction match the true signal?
+  let ssRes = 0
+  let ssTot = 0
+  for (let t = 0; t < T_TEST; t++) {
+    for (let j = 0; j < 6; j++) {
+      ssRes += (Y_signal_test[t][j] - Y_recon[t][j]) ** 2
+      ssTot += (Y_signal_test[t][j] - signalMeanTest[j]) ** 2
+    }
+  }
+  const r2 = 1 - ssRes / ssTot
 
-  // Align to true latent via Procrustes
-  const aligned = procrustesAlign(xTrue, scores2D)
-
-  return aligned
+  return { Y_recon, r2 }
 }
 
-/* ─── Time color: blue (t=0) → red (t=T-1) ─── */
-function timeColor(t, T) {
-  const frac = t / (T - 1)
-  // Interpolate from #4A7C6F (teal) to #c0503a (warm red) via light middle
-  const r = Math.round(74 + (192 - 74) * frac)
-  const g = Math.round(124 + (80 - 124) * frac)
-  const b = Math.round(111 + (58 - 111) * frac)
+/* ─── Color interpolation based on R² ─── */
+function reconColor(r2) {
+  const t = Math.max(0, Math.min(1, (r2 - 0.15) / 0.5))
+  const rb = parseInt(BLUE.slice(1, 3), 16)
+  const gb = parseInt(BLUE.slice(3, 5), 16)
+  const bb = parseInt(BLUE.slice(5, 7), 16)
+  const rr = parseInt(RED.slice(1, 3), 16)
+  const gr = parseInt(RED.slice(3, 5), 16)
+  const br = parseInt(RED.slice(5, 7), 16)
+  const r = Math.round(rr + (rb - rr) * t)
+  const g = Math.round(gr + (gb - gr) * t)
+  const b = Math.round(br + (bb - br) * t)
   return `rgb(${r},${g},${b})`
 }
 
-/* ─── Compute axis bounds for a set of 2D points ─── */
-function computeBounds(pts) {
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
-  for (const [x, y] of pts) {
-    if (x < minX) minX = x
-    if (x > maxX) maxX = x
-    if (y < minY) minY = y
-    if (y > maxY) maxY = y
-  }
-  // Add 15% padding
-  const padX = Math.max((maxX - minX) * 0.15, 0.05)
-  const padY = Math.max((maxY - minY) * 0.15, 0.05)
-  return {
-    minX: minX - padX,
-    maxX: maxX + padX,
-    minY: minY - padY,
-    maxY: maxY + padY,
-  }
+/* ─── SVG path for a single-channel time series ─── */
+function tracePath(values, x0, y0, w, h, yMin, yMax) {
+  return values
+    .map((v, i) => {
+      const sx = x0 + (i / (values.length - 1)) * w
+      const sy = y0 + h - ((v - yMin) / (yMax - yMin)) * h
+      return `${i === 0 ? "M" : "L"}${sx.toFixed(2)},${sy.toFixed(2)}`
+    })
+    .join(" ")
 }
 
-/* ─── Map data coords → SVG coords within a panel ─── */
-function makeMapper(bounds, panelLeft, panelTop, panelW, panelH) {
-  return function (x, y) {
-    const sx = panelLeft + ((x - bounds.minX) / (bounds.maxX - bounds.minX)) * panelW
-    const sy = panelTop + panelH - ((y - bounds.minY) / (bounds.maxY - bounds.minY)) * panelH
-    return [sx, sy]
-  }
-}
-
-/* ─── Build polyline path string ─── */
-function polylinePath(pts, toSVG) {
-  return pts.map(([x, y], i) => {
-    const [sx, sy] = toSVG(x, y)
-    return `${i === 0 ? "M" : "L"}${sx.toFixed(2)},${sy.toFixed(2)}`
-  }).join(" ")
-}
-
-/* ─── Panel component ─── */
-function TrajectoryPanel({ pts, color, label, panelLeft, panelTop }) {
-  const bounds = useMemo(() => computeBounds(pts), [pts])
-  const toSVG = useMemo(
-    () => makeMapper(bounds, panelLeft, panelTop, PANEL_W, PANEL_H),
-    [bounds, panelLeft, panelTop]
-  )
-  const T = pts.length
-  const pathD = polylinePath(pts, toSVG)
-
-  // Zero-crossing axes (clamped to data range so axes stay inside the panel)
-  const xZero = Math.max(bounds.minX, Math.min(bounds.maxX, 0))
-  const yZero = Math.max(bounds.minY, Math.min(bounds.maxY, 0))
-  const [axZeroX] = toSVG(xZero, bounds.minY)
-  const [, axZeroY] = toSVG(bounds.minX, yZero)
+/* ─── Panel: stacked channel traces ─── */
+function TracesPanel({ signalData, reconData, label, panelLeft, panelTop, color, yBounds }) {
+  const nCh = CHANNELS_SHOWN.length
+  const totalH = nCh * TRACE_H + (nCh - 1) * TRACE_GAP
 
   return (
     <g>
-      {/* Panel background */}
       <rect
         x={panelLeft}
         y={panelTop}
         width={PANEL_W}
-        height={PANEL_H}
+        height={totalH}
         rx={4}
         fill={BG_COLOR}
       />
 
-      {/* Axis lines */}
-      <line
-        x1={axZeroX} y1={panelTop}
-        x2={axZeroX} y2={panelTop + PANEL_H}
-        stroke={AXIS_COLOR}
-        strokeWidth={1}
-      />
-      <line
-        x1={panelLeft} y1={axZeroY}
-        x2={panelLeft + PANEL_W} y2={axZeroY}
-        stroke={AXIS_COLOR}
-        strokeWidth={1}
-      />
+      {CHANNELS_SHOWN.map((ch, ci) => {
+        const traceY = panelTop + ci * (TRACE_H + TRACE_GAP)
+        const { yMin, yMax } = yBounds[ch]
+        const sigVals = signalData.map(row => row[ch])
+        const sigPath = tracePath(sigVals, panelLeft, traceY, PANEL_W, TRACE_H, yMin, yMax)
 
-      {/* Axis labels */}
-      <text
-        x={panelLeft + PANEL_W - 4}
-        y={axZeroY + 12}
-        textAnchor="end"
-        fill={AXIS_COLOR}
-        fontFamily={FONT}
-        fontSize={9}
-      >
-        x₁
-      </text>
-      <text
-        x={axZeroX + 4}
-        y={panelTop + 11}
-        textAnchor="start"
-        fill={AXIS_COLOR}
-        fontFamily={FONT}
-        fontSize={9}
-      >
-        x₂
-      </text>
-
-      {/* Trajectory line */}
-      <path
-        d={pathD}
-        fill="none"
-        stroke={color}
-        strokeWidth={1.2}
-        strokeOpacity={0.35}
-      />
-
-      {/* Trajectory dots */}
-      {pts.map(([x, y], i) => {
-        const [sx, sy] = toSVG(x, y)
         return (
-          <circle
-            key={i}
-            cx={sx}
-            cy={sy}
-            r={2.2}
-            fill={timeColor(i, T)}
-            fillOpacity={0.85}
-          />
+          <g key={ch}>
+            {/* Channel label */}
+            <text
+              x={panelLeft - 4}
+              y={traceY + TRACE_H / 2 + 3}
+              textAnchor="end"
+              fill="rgba(0,0,0,0.28)"
+              fontFamily={FONT}
+              fontSize={8}
+            >
+              ch {ch + 1}
+            </text>
+
+            {/* Separator line */}
+            {ci < nCh - 1 && (
+              <line
+                x1={panelLeft}
+                y1={traceY + TRACE_H + TRACE_GAP / 2}
+                x2={panelLeft + PANEL_W}
+                y2={traceY + TRACE_H + TRACE_GAP / 2}
+                stroke={AXIS_COLOR}
+                strokeWidth={0.5}
+              />
+            )}
+
+            {/* Signal trace (gray) */}
+            <path d={sigPath} fill="none" stroke={SIGNAL_COLOR} strokeWidth={1.5} />
+
+            {/* Reconstruction overlay */}
+            {reconData && (
+              <path
+                d={tracePath(
+                  reconData.map(row => row[ch]),
+                  panelLeft,
+                  traceY,
+                  PANEL_W,
+                  TRACE_H,
+                  yMin,
+                  yMax
+                )}
+                fill="none"
+                stroke={color}
+                strokeWidth={1.5}
+              />
+            )}
+          </g>
         )
       })}
 
       {/* Panel label */}
       <text
         x={panelLeft + PANEL_W / 2}
-        y={panelTop + PANEL_H + 16}
+        y={panelTop - 8}
         textAnchor="middle"
-        fill={color}
+        fill={color || "rgba(0,0,0,0.45)"}
         fontFamily={FONT}
         fontSize={10}
         fontWeight={600}
@@ -403,9 +318,36 @@ function TrajectoryPanel({ pts, color, label, panelLeft, panelTop }) {
 export default function SubspaceRecoveryExplorer() {
   const [d, setD] = useState(2)
 
-  const { xTrue } = SIM
+  const { Y_signal_test } = SIM
+  const { Y_recon, r2 } = useMemo(() => reconstruct(d), [d])
 
-  const recovered = useMemo(() => recoverStates(d), [d])
+  // Compute shared y-bounds per channel (across signal + all possible recons)
+  // Use signal + current recon to set bounds
+  const yBounds = useMemo(() => {
+    const bounds = {}
+    for (const ch of CHANNELS_SHOWN) {
+      let mn = Infinity
+      let mx = -Infinity
+      for (const row of Y_signal_test) {
+        if (row[ch] < mn) mn = row[ch]
+        if (row[ch] > mx) mx = row[ch]
+      }
+      for (const row of Y_recon) {
+        if (row[ch] < mn) mn = row[ch]
+        if (row[ch] > mx) mx = row[ch]
+      }
+      const pad = (mx - mn) * 0.12
+      bounds[ch] = { yMin: mn - pad, yMax: mx + pad }
+    }
+    return bounds
+  }, [Y_recon])
+
+  const traceColor = reconColor(r2)
+  const r2Color = r2 > 0.55 ? TEAL : r2 < 0.35 ? RED : "#777"
+
+  const nCh = CHANNELS_SHOWN.length
+  const totalTraceH = nCh * TRACE_H + (nCh - 1) * TRACE_GAP
+  const r2Y = PAD_Y + totalTraceH + 28
 
   return (
     <div>
@@ -413,45 +355,76 @@ export default function SubspaceRecoveryExplorer() {
         viewBox={`0 0 ${W} ${H}`}
         style={{ width: "100%", display: "block", overflow: "visible" }}
       >
-        {/* True latent panel */}
-        <TrajectoryPanel
-          pts={xTrue}
-          color={TEAL}
-          label="true latent"
+        {/* Left: true signal (test period) */}
+        <TracesPanel
+          signalData={Y_signal_test}
+          reconData={null}
+          label="signal (test)"
           panelLeft={PAD_X}
           panelTop={PAD_Y}
+          color="rgba(0,0,0,0.4)"
+          yBounds={yBounds}
         />
 
-        {/* Recovered panel */}
-        <TrajectoryPanel
-          pts={recovered}
-          color={BLUE}
-          label={`recovered (d = ${d})`}
+        {/* Right: reconstruction overlaid on signal */}
+        <TracesPanel
+          signalData={Y_signal_test}
+          reconData={Y_recon}
+          label={`reconstructed (d\u2009=\u2009${d})`}
           panelLeft={P2_X}
           panelTop={PAD_Y}
+          color={traceColor}
+          yBounds={yBounds}
         />
+
+        {/* R² readout */}
+        <text
+          x={W / 2}
+          y={r2Y}
+          textAnchor="middle"
+          fontFamily={FONT}
+          fontSize={15}
+          fontWeight={700}
+          fill={r2Color}
+        >
+          denoising R² = {r2.toFixed(2)}
+        </text>
       </svg>
 
-      {/* Toggle */}
-      <div className="blog-figure__controls" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginTop: 8 }}>
-        {[1, 2].map(val => (
-          <button
-            key={val}
-            onClick={() => setD(val)}
-            style={{
-              fontFamily: FONT,
-              fontSize: 12,
-              padding: "4px 14px",
-              background: d === val ? BLUE : "white",
-              color: d === val ? "white" : "#333",
-              border: `1.5px solid ${d === val ? BLUE : "#ccc"}`,
-              borderRadius: 3,
-              cursor: "pointer",
-            }}
-          >
-            d = {val}
-          </button>
-        ))}
+      {/* Slider */}
+      <div
+        className="blog-figure__controls"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          justifyContent: "center",
+          marginTop: 4,
+        }}
+      >
+        <label style={{ fontFamily: FONT, fontSize: 12, color: "#555" }}>
+          latent dimensions d
+        </label>
+        <input
+          type="range"
+          min={1}
+          max={6}
+          step={1}
+          value={d}
+          onChange={e => setD(Number(e.target.value))}
+          style={{ width: 140 }}
+        />
+        <span
+          style={{
+            fontFamily: FONT,
+            fontSize: 13,
+            fontWeight: 600,
+            color: traceColor,
+            minWidth: 28,
+          }}
+        >
+          {d}
+        </span>
       </div>
     </div>
   )

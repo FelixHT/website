@@ -1,7 +1,7 @@
-import React, { useState, useRef, useCallback } from "react"
+import React, { useState, useRef, useCallback, useMemo } from "react"
 
 /* ─── Layout ─── */
-const W = 600
+const W = 700
 const H = 300
 const FONT = "var(--font-mono, monospace)"
 
@@ -15,17 +15,28 @@ const SINGULAR_VALUES = [8.5, 6.2, 0.9, 0.7, 0.5, 0.4, 0.35, 0.3, 0.25, 0.2]
 const N = SINGULAR_VALUES.length
 const DEFAULT_THRESHOLD = 3.0
 
-/* ─── Chart geometry ─── */
-const BAR_W = 40
-const BAR_GAP = 12
-const CHART_L = 52       // left margin
-const CHART_R = W - 24   // right margin
-const CHART_TOP = 36     // top margin (for "signal" / "noise floor" labels)
-const CHART_BOT = H - 46 // bottom margin (for σ labels)
+/* ─── Bar chart geometry ─── */
+const BAR_W = 28
+const BAR_GAP = 5
+const CHART_L = 52        // left margin
+const CHART_R = 380       // right edge of bar chart area
+const CHART_TOP = 36      // top margin
+const CHART_BOT = H - 46  // bottom margin
 const CHART_H = CHART_BOT - CHART_TOP
 
-const SV_MAX = 9.5       // scale top
+const SV_MAX = 9.5
 const SV_MIN = 0.0
+
+/* ─── Reconstruction panel geometry ─── */
+const REC_L = 408         // left edge of reconstruction panel
+const REC_W = W - REC_L - 8  // ~284px
+const REC_TOP = 28
+const REC_BOT = H - 32
+const REC_FULL_H = REC_BOT - REC_TOP
+
+const N_TRACES = 3        // channels to display
+const TRACE_GAP = 6       // px gap between traces
+const TRACE_H = Math.floor((REC_FULL_H - TRACE_GAP * (N_TRACES - 1)) / N_TRACES)
 
 /* Map a singular value to a y pixel coordinate */
 function svToY(sv) {
@@ -48,6 +59,185 @@ function barX(i) {
 
 /* Subscript digits map */
 const SUB = { 1: "₁", 2: "₂", 3: "₃", 4: "₄", 5: "₅", 6: "₆", 7: "₇", 8: "₈", 9: "₉", 10: "₁₀" }
+
+/* ─────────────────────────────────────────────
+   Data generation (same dynamics as SubspaceRecoveryExplorer)
+   mulberry32 seed = 2026
+   ───────────────────────────────────────────── */
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0
+    seed = (seed + 0x6d2b79f5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function randn(rng) {
+  const u1 = rng()
+  const u2 = rng()
+  const r = Math.sqrt(-2 * Math.log(Math.max(u1, 1e-12)))
+  const theta = 2 * Math.PI * u2
+  return [r * Math.cos(theta), r * Math.sin(theta)]
+}
+
+function dot(a, b) {
+  return a.reduce((s, v, i) => s + v * b[i], 0)
+}
+
+function vecScale(a, s) {
+  return a.map(v => v * s)
+}
+
+function vecSub(a, b) {
+  return a.map((v, i) => v - b[i])
+}
+
+function norm(a) {
+  return Math.sqrt(dot(a, a))
+}
+
+function normalize(a) {
+  const n = norm(a)
+  return n < 1e-12 ? a : a.map(v => v / n)
+}
+
+function matVec(M, v) {
+  return M.map(row => row.reduce((s, a, j) => s + a * v[j], 0))
+}
+
+function matTmat(A) {
+  const rows = A.length
+  const cols = A[0].length
+  const R = Array.from({ length: cols }, () => new Array(cols).fill(0))
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      for (let k = 0; k < cols; k++) {
+        R[j][k] += A[i][j] * A[i][k]
+      }
+    }
+  }
+  return R
+}
+
+/* Power iteration for top-k eigenvectors of a symmetric matrix */
+function topKEigenvectors(M, k, rng) {
+  const n = M.length
+  const vecs = []
+  for (let ei = 0; ei < k; ei++) {
+    let v = Array.from({ length: n }, () => rng() - 0.5)
+    v = normalize(v)
+    for (let iter = 0; iter < 300; iter++) {
+      let w = matVec(M, v)
+      for (const prev of vecs) {
+        const proj = dot(w, prev)
+        w = vecSub(w, vecScale(prev, proj))
+      }
+      const wNorm = norm(w)
+      if (wNorm < 1e-14) break
+      v = vecScale(w, 1 / wNorm)
+    }
+    for (const prev of vecs) {
+      const proj = dot(v, prev)
+      v = vecSub(v, vecScale(prev, proj))
+    }
+    v = normalize(v)
+    vecs.push(v)
+  }
+  return vecs
+}
+
+/* Generate simulation data (T=100 steps, 6 observed channels) */
+function generateSimData() {
+  const rng = mulberry32(2026)
+
+  const T = 100
+  const A = [[0.98, -0.2], [0.2, 0.98]]
+  const xTrue = [[1, 0]]
+  for (let t = 1; t < T; t++) {
+    xTrue.push(matVec(A, xTrue[t - 1]))
+  }
+
+  // 6×2 mixing matrix
+  const C = Array.from({ length: 6 }, () => {
+    const [a, b] = randn(rng)
+    return [a, b]
+  })
+
+  const NOISE_STD = 0.15
+  const Y = xTrue.map(x => {
+    const cx = matVec(C, x)
+    return cx.map(v => {
+      const [n1] = randn(rng)
+      return v + n1 * NOISE_STD
+    })
+  })
+
+  // Center column-wise using TRAIN portion only (first 50 steps)
+  const TRAIN = 50
+  const means = Array(6).fill(0)
+  for (let j = 0; j < 6; j++) {
+    for (let t = 0; t < TRAIN; t++) means[j] += Y[t][j]
+    means[j] /= TRAIN
+  }
+
+  const Yc = Y.map(row => row.map((v, j) => v - means[j]))
+
+  // Train / test split
+  const Ytrain = Yc.slice(0, TRAIN)
+  const Ytest = Yc.slice(TRAIN)
+
+  // Covariance from train data
+  const YtY = matTmat(Ytrain)
+
+  return { Ytrain, Ytest, YtY, T, TRAIN }
+}
+
+const SIM_DATA = generateSimData()
+
+/* Reconstruct test observations with d-dimensional PCA subspace.
+   ŷ = V_d V_d^T y  (projection onto d leading eigenvectors) */
+function computeReconstruction(d) {
+  const { Ytest, YtY } = SIM_DATA
+  const iterRng = mulberry32(42)
+  const eigvecs = topKEigenvectors(YtY, d, iterRng)
+
+  // For each test observation y, compute ŷ = sum_k (y·v_k) v_k
+  const Yhat = Ytest.map(y => {
+    const recon = new Array(y.length).fill(0)
+    for (const vk of eigvecs) {
+      const coeff = dot(y, vk)
+      for (let j = 0; j < y.length; j++) {
+        recon[j] += coeff * vk[j]
+      }
+    }
+    return recon
+  })
+
+  // Compute R² across all channels and time steps
+  const P = Ytest.length
+  const nchan = Ytest[0].length
+  let ssTot = 0
+  let ssRes = 0
+  // mean of Ytest per channel
+  const testMeans = Array(nchan).fill(0)
+  for (let t = 0; t < P; t++) {
+    for (let j = 0; j < nchan; j++) testMeans[j] += Ytest[t][j]
+  }
+  for (let j = 0; j < nchan; j++) testMeans[j] /= P
+
+  for (let t = 0; t < P; t++) {
+    for (let j = 0; j < nchan; j++) {
+      ssTot += (Ytest[t][j] - testMeans[j]) ** 2
+      ssRes += (Ytest[t][j] - Yhat[t][j]) ** 2
+    }
+  }
+
+  const r2 = Math.max(0, 1 - ssRes / ssTot)
+  return { Yhat, r2 }
+}
 
 export default function DimensionalityCriterionExplorer() {
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD)
@@ -108,6 +298,44 @@ export default function DimensionalityCriterionExplorer() {
   const signalMidX = (barX(0) + barX(1)) / 2
   /* "noise floor" label: center of bars 3–10 */
   const noiseMidX = (barX(2) + barX(9)) / 2
+
+  /* Reconstruction panel data, keyed on d */
+  const dClamped = Math.max(1, Math.min(d, 10))
+  const { Yhat, r2 } = useMemo(() => computeReconstruction(dClamped), [dClamped])
+  const { Ytest } = SIM_DATA
+
+  /* Build polyline points for each of the first N_TRACES channels */
+  const traceData = useMemo(() => {
+    return Array.from({ length: N_TRACES }, (_, ch) => {
+      const obsVals = Ytest.map(row => row[ch])
+      const recVals = Yhat.map(row => row[ch])
+      const allVals = [...obsVals, ...recVals]
+      const vMin = Math.min(...allVals)
+      const vMax = Math.max(...allVals)
+      const vRange = vMax - vMin || 1
+
+      const T = obsVals.length
+      const traceTop = REC_TOP + ch * (TRACE_H + TRACE_GAP)
+
+      function toSVG(t, v) {
+        const x = REC_L + (t / (T - 1)) * REC_W
+        const y = traceTop + TRACE_H - ((v - vMin) / vRange) * TRACE_H
+        return [x, y]
+      }
+
+      function toPoints(vals) {
+        return vals.map((v, t) => toSVG(t, v).join(",")).join(" ")
+      }
+
+      return {
+        obsPoints: toPoints(obsVals),
+        recPoints: toPoints(recVals),
+        traceTop,
+      }
+    })
+  }, [Yhat, Ytest])
+
+  const r2Display = r2.toFixed(2)
 
   return (
     <div style={{ userSelect: "none", touchAction: "none" }}>
@@ -248,7 +476,6 @@ export default function DimensionalityCriterionExplorer() {
         {/* ── Gap annotation (only when threshold is in the gap) ── */}
         {inGap && (
           <g>
-            {/* Arrow from annotation text to gap */}
             <line
               x1={gapMidX + 28}
               y1={gapMidY - 8}
@@ -284,6 +511,73 @@ export default function DimensionalityCriterionExplorer() {
             <path d="M0,0 L6,3 L0,6 Z" fill="rgba(0,0,0,0.55)" />
           </marker>
         </defs>
+
+        {/* ════════════════════════════════════════
+            Reconstruction panel
+            ════════════════════════════════════════ */}
+
+        {/* Panel title */}
+        <text
+          x={REC_L + REC_W / 2}
+          y={REC_TOP - 10}
+          textAnchor="middle"
+          fontSize={10}
+          fill="rgba(0,0,0,0.45)"
+          fontFamily={FONT}
+        >
+          test reconstruction
+        </text>
+
+        {/* Divider line */}
+        <line
+          x1={REC_L - 14}
+          y1={REC_TOP - 4}
+          x2={REC_L - 14}
+          y2={REC_BOT}
+          stroke="rgba(0,0,0,0.08)"
+          strokeWidth={1}
+        />
+
+        {/* Trace subplots */}
+        {traceData.map(({ obsPoints, recPoints, traceTop }, ch) => (
+          <g key={ch}>
+            {/* Subplot background */}
+            <rect
+              x={REC_L}
+              y={traceTop}
+              width={REC_W}
+              height={TRACE_H}
+              fill="rgba(0,0,0,0.02)"
+              rx={2}
+            />
+            {/* Observed trace */}
+            <polyline
+              points={obsPoints}
+              fill="none"
+              stroke="rgba(0,0,0,0.2)"
+              strokeWidth={1.2}
+            />
+            {/* Reconstructed trace */}
+            <polyline
+              points={recPoints}
+              fill="none"
+              stroke={TEAL}
+              strokeWidth={1.5}
+            />
+          </g>
+        ))}
+
+        {/* R² label */}
+        <text
+          x={REC_L + REC_W / 2}
+          y={REC_BOT + 16}
+          textAnchor="middle"
+          fontSize={10}
+          fill="rgba(0,0,0,0.5)"
+          fontFamily={FONT}
+        >
+          {`R² = ${r2Display}`}
+        </text>
       </svg>
     </div>
   )

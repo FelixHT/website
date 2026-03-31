@@ -162,7 +162,7 @@ export default function HankelSVD() {
                   fill={isSignal ? "#4A7C6F" : "#ccc"}
                   rx={1}
                 />
-                {i < 6 && (
+                {(i < 6 || i === numBars - 1) && (
                   <text
                     x={x + barW / 2} y={PLOT_H - 6}
                     textAnchor="middle"
@@ -175,21 +175,14 @@ export default function HankelSVD() {
             )
           })}
 
-          {/* Gap annotation */}
-          <line
-            x1={(TRUE_DIM - 0.5) * (barW + barGap) + barW}
-            y1={PLOT_H - 20 - barScale(barVals[TRUE_DIM - 1]) - 5}
-            x2={(TRUE_DIM + 0.5) * (barW + barGap)}
-            y2={PLOT_H - 20 - barScale(barVals[TRUE_DIM]) - 5}
-            stroke="#d9534f" strokeWidth={1.5} strokeDasharray="3 2"
-          />
+          {/* Signal/noise labels */}
           <text
-            x={(TRUE_DIM) * (barW + barGap) + barW / 2}
-            y={PLOT_H - 20 - barScale(barVals[TRUE_DIM - 1]) - 12}
+            x={((TRUE_DIM - 1) / 2) * (barW + barGap) + barW / 2}
+            y={PLOT_H - 20 - barScale(barVals[0]) - 8}
             textAnchor="middle"
-            style={{ fontFamily: "var(--font-mono)", fontSize: 10, fill: "#d9534f", fontWeight: 600 }}
+            style={{ fontFamily: "var(--font-mono)", fontSize: 9, fill: "#4A7C6F" }}
           >
-            gap
+            signal
           </text>
         </g>
       </svg>

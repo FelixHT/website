@@ -56,11 +56,12 @@ const PRESETS = [
   },
   {
     label: "unstable node",
-    A: rotatedDiag(1.005, 1.008),
+    A: rotatedDiag(1.03, 1.05),
     eigs: [
-      { re: 1.005, im: 0 },
-      { re: 1.008, im: 0 },
+      { re: 1.03, im: 0 },
+      { re: 1.05, im: 0 },
     ],
+    steps: 30,
   },
   {
     label: "stable spiral",
@@ -87,13 +88,14 @@ const PRESETS = [
   {
     label: "unstable spiral",
     A: [
-      [0.987, -0.2],
-      [0.2, 0.987],
+      [1.02, -0.2],
+      [0.2, 1.02],
     ],
     eigs: [
-      { re: 0.987, im: 0.2 },
-      { re: 0.987, im: -0.2 },
+      { re: 1.02, im: 0.2 },
+      { re: 1.02, im: -0.2 },
     ],
+    steps: 40,
   },
 ]
 
@@ -129,23 +131,34 @@ export default function PhasePortraitExplorer() {
 
   /* ─── Trajectory, range, grid — all derived together ─── */
   const phaseData = useMemo(() => {
-    // Fixed range — presets are tuned so trajectories stay visible
-    const range = 2
-    const pxPerUnit = LP_W / (2 * range)
-    const N = 80
+    // Run trajectory for the preset's step count
+    const N = preset.steps || 80
     const pts = [[1, 0.3]]
     for (let i = 0; i < N; i++) {
-      const next = matVec(preset.A, pts[pts.length - 1])
-      if (Math.abs(next[0]) > range * 1.5 || Math.abs(next[1]) > range * 1.5) break
-      pts.push(next)
+      pts.push(matVec(preset.A, pts[pts.length - 1]))
     }
 
-    // Build colored segments (no clipping needed — range already fits trajectory)
+    // Auto-scale range to fit trajectory, pick nice tick spacing
+    let maxExtent = 0
+    for (const [x, y] of pts) {
+      maxExtent = Math.max(maxExtent, Math.abs(x), Math.abs(y))
+    }
+    // Pick a nice range: round up to a clean number
+    const niceSteps = [1, 1.5, 2, 3, 4, 5, 8, 10, 15, 20]
+    let range = 2
+    for (const n of niceSteps) {
+      if (n >= maxExtent * 1.15) { range = n; break }
+    }
+    if (range < maxExtent * 1.15) range = Math.ceil(maxExtent * 1.2)
+
+    const pxPerUnit = LP_W / (2 * range)
+
+    // Build colored segments
     const segs = []
     for (let i = 0; i < pts.length - 1; i++) {
       const [x0, y0] = pts[i]
       const [x1, y1] = pts[i + 1]
-      const t = i / (pts.length - 2)
+      const t = pts.length > 2 ? i / (pts.length - 2) : 0
       segs.push({
         x0: LP_CX + x0 * pxPerUnit,
         y0: LP_CY - y0 * pxPerUnit,
@@ -155,24 +168,19 @@ export default function PhasePortraitExplorer() {
       })
     }
 
-    // Grid lines: one per integer unit, skipping 0
+    // Grid: 2 ticks per half-axis at most
+    const tickSpacing = range <= 2 ? 1 : range <= 5 ? 2 : range <= 10 ? 5 : 10
     const gridLines = []
-    for (let v = -(range - 1); v <= range - 1; v++) {
-      if (v === 0) continue
+    const ticks = []
+    for (let v = -range + tickSpacing; v < range; v += tickSpacing) {
+      if (Math.abs(v) < 0.01) continue
       const sx = LP_CX + v * pxPerUnit
       gridLines.push({ x1: sx, y1: LP_Y, x2: sx, y2: LP_Y + LP_H })
       const sy = LP_CY - v * pxPerUnit
       gridLines.push({ x1: LP_X, y1: sy, x2: LP_X + LP_W, y2: sy })
-    }
-
-    // Tick values: every integer from -(range-1) to (range-1), skipping 0
-    const ticks = []
-    for (let v = -(range - 1); v <= range - 1; v++) {
-      if (v === 0) continue
       ticks.push(v)
     }
 
-    // Start point in SVG coords
     const startSx = LP_CX + 1 * pxPerUnit
     const startSy = LP_CY - 0.3 * pxPerUnit
 
