@@ -2,18 +2,25 @@ import React, { useState, useMemo } from "react"
 
 /* ─── Layout ─── */
 const W = 700
-const H = 420
-const PLOT_CX = 260
-const PLOT_CY = 200
-const PLOT_R = 160
+const H = 500
+const PLOT_CX = 230
+const PLOT_CY = 235
+const PLOT_R = 185
 const FONT = "var(--font-mono, monospace)"
 
 /* ─── Colors ─── */
 const TEAL = "#4A7C6F"
-const PCA_STROKE = "rgba(0,0,0,0.2)"
-const FULL_STROKE = "rgba(0,0,0,0.25)"
-const READOUT_X = 540
-const READOUT_Y = 80
+const PCA_STROKE = "rgba(0,0,0,0.3)"
+const BLUE_LO = "#3d6cb9"
+const RED_HI = "#c0503a"
+
+const READOUT_X = 465
+const READOUT_Y = 50
+
+const N = 50
+const D = 6 // source dimensions
+const DY = 2 // target dimensions
+const SEED = 2024
 
 /* ─── Seeded PRNG (mulberry32) ─── */
 function mulberry32(seed) {
@@ -27,188 +34,368 @@ function mulberry32(seed) {
 }
 
 function randn(rng) {
-  // Box-Muller
   const u1 = rng()
   const u2 = rng()
   return Math.sqrt(-2 * Math.log(u1 + 1e-12)) * Math.cos(2 * Math.PI * u2)
 }
 
-/* ─── Generate data where PCA != RRR ─── */
-// X is 2D, Y is 1D. The true regression direction (beta) is tilted ~30deg
-// away from the first PC of X, so max-variance != max-prediction.
-function generateData() {
-  const rng = mulberry32(77)
-  const N = 40
+/* ─── Linear algebra helpers for arbitrary dimensions ─── */
 
-  // PCA direction of X: roughly along (1, 0) with large variance.
-  // Second PC along (0, 1) with smaller variance.
-  // True beta tilted ~30deg from first PC.
-  const pcaAngle = 0 // first PC is horizontal
-  const betaAngle = Math.PI / 6 // 30deg tilt from PCA direction
-
-  const sigma1 = 2.5 // variance along first PC
-  const sigma2 = 1.0 // variance along second PC
-
-  const beta = [Math.cos(betaAngle), Math.sin(betaAngle)]
-
-  const X = []
-  const Y = []
-
-  for (let i = 0; i < N; i++) {
-    // Generate X in PCA coordinates then rotate
-    const z1 = randn(rng) * sigma1
-    const z2 = randn(rng) * sigma2
-    const x1 = z1 * Math.cos(pcaAngle) - z2 * Math.sin(pcaAngle)
-    const x2 = z1 * Math.sin(pcaAngle) + z2 * Math.cos(pcaAngle)
-    X.push([x1, x2])
-
-    // Y = X * beta + noise
-    const y = x1 * beta[0] + x2 * beta[1] + randn(rng) * 0.6
-    Y.push(y)
+function zeros(r, c) {
+  const m = []
+  for (let i = 0; i < r; i++) {
+    m[i] = new Array(c).fill(0)
   }
-
-  return { X, Y, pcaAngle, betaAngle, N }
+  return m
 }
 
-/* ─── Linear algebra helpers ─── */
-function dot(a, b) {
-  return a[0] * b[0] + a[1] * b[1]
+function transpose(A) {
+  const r = A.length, c = A[0].length
+  const T = zeros(c, r)
+  for (let i = 0; i < r; i++)
+    for (let j = 0; j < c; j++)
+      T[j][i] = A[i][j]
+  return T
+}
+
+function matMul(A, B) {
+  const r = A.length, inner = A[0].length, c = B[0].length
+  const C = zeros(r, c)
+  for (let i = 0; i < r; i++)
+    for (let j = 0; j < c; j++) {
+      let s = 0
+      for (let k = 0; k < inner; k++) s += A[i][k] * B[k][j]
+      C[i][j] = s
+    }
+  return C
+}
+
+function matVec(A, v) {
+  const r = A.length, c = A[0].length
+  const out = new Array(r).fill(0)
+  for (let i = 0; i < r; i++)
+    for (let j = 0; j < c; j++)
+      out[i] += A[i][j] * v[j]
+  return out
+}
+
+function dotVec(a, b) {
+  let s = 0
+  for (let i = 0; i < a.length; i++) s += a[i] * b[i]
+  return s
 }
 
 function vecNorm(v) {
-  return Math.sqrt(v[0] * v[0] + v[1] * v[1])
+  return Math.sqrt(dotVec(v, v))
 }
 
-function vecNormalize(v) {
-  const n = vecNorm(v)
-  return n > 1e-12 ? [v[0] / n, v[1] / n] : [1, 0]
+function vecScale(v, s) {
+  return v.map(x => x * s)
 }
 
-/* ─── Compute OLS regression: Y = X * beta ─── */
-// For 2D X, beta = (X^T X)^{-1} X^T Y
+function vecSub(a, b) {
+  return a.map((x, i) => x - b[i])
+}
+
+/* ─── Solve A x = b for symmetric positive-definite A via Cholesky ─── */
+function choleskySolve(A, b) {
+  const n = A.length
+  // Cholesky decomposition: A = L L^T
+  const L = zeros(n, n)
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      let s = A[i][j]
+      for (let k = 0; k < j; k++) s -= L[i][k] * L[j][k]
+      if (i === j) {
+        L[i][j] = Math.sqrt(Math.max(s, 1e-12))
+      } else {
+        L[i][j] = s / L[j][j]
+      }
+    }
+  }
+  // Forward substitution: L y = b
+  const y = new Array(n).fill(0)
+  for (let i = 0; i < n; i++) {
+    let s = b[i]
+    for (let j = 0; j < i; j++) s -= L[i][j] * y[j]
+    y[i] = s / L[i][i]
+  }
+  // Back substitution: L^T x = y
+  const x = new Array(n).fill(0)
+  for (let i = n - 1; i >= 0; i--) {
+    let s = y[i]
+    for (let j = i + 1; j < n; j++) s -= L[j][i] * x[j]
+    x[i] = s / L[i][i]
+  }
+  return x
+}
+
+/* ─── Solve A X = B column by column ─── */
+function choleskySolveMatrix(A, B) {
+  const nCols = B[0].length
+  const result = zeros(A.length, nCols)
+  for (let c = 0; c < nCols; c++) {
+    const col = A.map((_, i) => B[i][c])
+    const x = choleskySolve(A, col)
+    for (let i = 0; i < x.length; i++) result[i][c] = x[i]
+  }
+  return result
+}
+
+/* ─── Power iteration for eigendecomposition of symmetric matrix ─── */
+/* Returns { values: [...], vectors: [[...], ...] } sorted descending */
+function eigenSymmetric(M, nEigs) {
+  const n = M.length
+  const rng = mulberry32(42)
+  const values = []
+  const vectors = []
+  // Work on a copy so deflation doesn't affect the original
+  const A = M.map(row => [...row])
+
+  for (let e = 0; e < nEigs; e++) {
+    // Random starting vector
+    let v = []
+    for (let i = 0; i < n; i++) v.push(randn(rng))
+    let norm = vecNorm(v)
+    v = v.map(x => x / norm)
+
+    for (let iter = 0; iter < 200; iter++) {
+      const Av = matVec(A, v)
+      norm = vecNorm(Av)
+      if (norm < 1e-14) break
+      const vNew = Av.map(x => x / norm)
+      // Check convergence
+      let diff = 0
+      for (let i = 0; i < n; i++) diff += (vNew[i] - v[i]) ** 2
+      v = vNew
+      if (diff < 1e-14) break
+    }
+
+    const lambda = dotVec(v, matVec(A, v))
+    values.push(lambda)
+    vectors.push(v)
+
+    // Deflate: A = A - lambda * v * v^T
+    for (let i = 0; i < n; i++)
+      for (let j = 0; j < n; j++)
+        A[i][j] -= lambda * v[i] * v[j]
+  }
+
+  return { values, vectors }
+}
+
+/* ─── SVD of a (d x p) matrix via eigendecomposition of A^T A ─── */
+/* Returns { U, S, Vt } where A ≈ U diag(S) Vt */
+function svd(A) {
+  const d = A.length, p = A[0].length
+  const At = transpose(A)
+  const AtA = matMul(At, A) // p x p
+  const rank = Math.min(d, p)
+  const eig = eigenSymmetric(AtA, rank)
+
+  const S = []
+  const V = [] // columns of V (right singular vectors)
+  const U = [] // columns of U
+
+  for (let k = 0; k < rank; k++) {
+    const sigma2 = Math.max(eig.values[k], 0)
+    const sigma = Math.sqrt(sigma2)
+    S.push(sigma)
+    V.push(eig.vectors[k])
+    if (sigma > 1e-12) {
+      const Av = matVec(A, eig.vectors[k])
+      U.push(Av.map(x => x / sigma))
+    } else {
+      U.push(new Array(d).fill(0))
+    }
+  }
+
+  // Vt: each row is a right singular vector
+  const Vt = zeros(rank, p)
+  for (let k = 0; k < rank; k++)
+    for (let j = 0; j < p; j++)
+      Vt[k][j] = V[k][j]
+
+  // U as matrix: d x rank
+  const Umat = zeros(d, rank)
+  for (let k = 0; k < rank; k++)
+    for (let i = 0; i < d; i++)
+      Umat[i][k] = U[k][i]
+
+  return { U: Umat, S, Vt }
+}
+
+/* ─── Generate data: 6D source, 2D target ─── */
+/* The predictive directions are deliberately NOT aligned with the PCA directions */
+function generateData() {
+  const rng = mulberry32(SEED)
+
+  // Generate X with specific covariance structure:
+  // Large variance along dims 0-1 (PCA will find these first)
+  // The target Y depends on dims 3-4 (low-variance, high-prediction directions)
+  // This creates the PCA ≠ prediction mismatch
+
+  const variances = [5.0, 3.5, 2.0, 1.2, 0.8, 0.5]
+
+  // Generate raw data along principal axes
+  const Xraw = zeros(N, D)
+  for (let i = 0; i < N; i++)
+    for (let j = 0; j < D; j++)
+      Xraw[i][j] = randn(rng) * Math.sqrt(variances[j])
+
+  // Apply a random rotation so the data isn't axis-aligned
+  // (but the relative variance structure is preserved)
+  // Use a fixed rotation matrix constructed via Gram-Schmidt on random vectors
+  const rawBasis = []
+  for (let k = 0; k < D; k++) {
+    const v = []
+    for (let j = 0; j < D; j++) v.push(randn(rng))
+    rawBasis.push(v)
+  }
+  // Gram-Schmidt
+  const Q = []
+  for (let k = 0; k < D; k++) {
+    let v = [...rawBasis[k]]
+    for (let j = 0; j < k; j++) {
+      const proj = dotVec(v, Q[j])
+      v = vecSub(v, vecScale(Q[j], proj))
+    }
+    const n = vecNorm(v)
+    Q.push(v.map(x => x / n))
+  }
+
+  // Rotated data: X = Xraw * Q^T
+  const Qmat = zeros(D, D)
+  for (let i = 0; i < D; i++)
+    for (let j = 0; j < D; j++)
+      Qmat[i][j] = Q[i][j]
+
+  const QmatT = transpose(Qmat)
+  const X = zeros(N, D)
+  for (let i = 0; i < N; i++) {
+    const row = matVec(QmatT, Xraw[i])
+    for (let j = 0; j < D; j++) X[i][j] = row[j]
+  }
+
+  // True mapping: Y depends on the low-variance directions (axes 3,4 in Xraw space)
+  // w_true in rotated space = Q^T * w_raw
+  // w_raw for Y1: primarily axis 3 with a bit of axis 0
+  // w_raw for Y2: primarily axis 4 with a bit of axis 1
+  const wRaw1 = [0.15, 0.0, 0.0, 1.0, 0.0, 0.0]
+  const wRaw2 = [0.0, 0.1, 0.0, 0.0, 1.0, 0.0]
+
+  // True weights in the rotated coordinate system
+  const w1 = matVec(QmatT, wRaw1)
+  const w2 = matVec(QmatT, wRaw2)
+
+  // Generate Y = X * W + noise
+  const Y = zeros(N, DY)
+  for (let i = 0; i < N; i++) {
+    Y[i][0] = dotVec(X[i], w1) + randn(rng) * 0.5
+    Y[i][1] = dotVec(X[i], w2) + randn(rng) * 0.5
+  }
+
+  // Center X and Y
+  const meanX = new Array(D).fill(0)
+  const meanY = new Array(DY).fill(0)
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < D; j++) meanX[j] += X[i][j]
+    for (let j = 0; j < DY; j++) meanY[j] += Y[i][j]
+  }
+  for (let j = 0; j < D; j++) meanX[j] /= N
+  for (let j = 0; j < DY; j++) meanY[j] /= N
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < D; j++) X[i][j] -= meanX[j]
+    for (let j = 0; j < DY; j++) Y[i][j] -= meanY[j]
+  }
+
+  return { X, Y }
+}
+
+/* ─── Compute PCA of X (top 2 eigenvectors for display) ─── */
+function computePCA(X) {
+  const n = X.length, d = X[0].length
+  // Covariance: X^T X / n
+  const Xt = transpose(X)
+  const cov = matMul(Xt, X)
+  for (let i = 0; i < d; i++)
+    for (let j = 0; j < d; j++)
+      cov[i][j] /= n
+
+  const eig = eigenSymmetric(cov, d)
+  return { values: eig.values, vectors: eig.vectors }
+}
+
+/* ─── Full OLS: B = (X^T X)^{-1} X^T Y, returns D x DY matrix ─── */
 function computeOLS(X, Y) {
-  const n = X.length
-  // X^T X (2x2)
-  let a00 = 0, a01 = 0, a11 = 0
-  let b0 = 0, b1 = 0
-  for (let i = 0; i < n; i++) {
-    a00 += X[i][0] * X[i][0]
-    a01 += X[i][0] * X[i][1]
-    a11 += X[i][1] * X[i][1]
-    b0 += X[i][0] * Y[i]
-    b1 += X[i][1] * Y[i]
-  }
-  // Invert 2x2 symmetric matrix
-  const det = a00 * a11 - a01 * a01
-  if (Math.abs(det) < 1e-12) return [1, 0]
-  const inv00 = a11 / det
-  const inv01 = -a01 / det
-  const inv11 = a00 / det
-  return [inv00 * b0 + inv01 * b1, inv01 * b0 + inv11 * b1]
+  const Xt = transpose(X)
+  const XtX = matMul(Xt, X)    // D x D
+  const XtY = matMul(Xt, Y)    // D x DY
+  // Add small ridge for numerical stability
+  for (let i = 0; i < XtX.length; i++) XtX[i][i] += 1e-8
+  return choleskySolveMatrix(XtX, XtY) // D x DY
 }
 
-/* ─── Compute R-squared ─── */
-function computeR2(X, Y, beta) {
-  const n = X.length
-  let ssRes = 0
-  let ssTot = 0
-  let yMean = 0
-  for (let i = 0; i < n; i++) yMean += Y[i]
-  yMean /= n
-  for (let i = 0; i < n; i++) {
-    const yHat = X[i][0] * beta[0] + X[i][1] * beta[1]
-    ssRes += (Y[i] - yHat) * (Y[i] - yHat)
-    ssTot += (Y[i] - yMean) * (Y[i] - yMean)
+/* ─── Rank-k RRR: truncated SVD of B_full ─── */
+/* B_k = U[:,:k] diag(S[:k]) Vt[:k,:] */
+function computeRRR(Bfull, rank) {
+  const { U, S, Vt } = svd(Bfull)
+  const d = Bfull.length, p = Bfull[0].length
+  const k = Math.min(rank, S.length)
+  const Bk = zeros(d, p)
+  for (let r = 0; r < k; r++) {
+    if (S[r] < 1e-12) continue
+    for (let i = 0; i < d; i++)
+      for (let j = 0; j < p; j++)
+        Bk[i][j] += U[i][r] * S[r] * Vt[r][j]
   }
+  // The rank-1 RRR direction in source space is U[:,0] (first left singular vector of B)
+  const direction = U.map(row => row[0])
+  return { Bk, direction, U, S, Vt }
+}
+
+/* ─── Multivariate R²: 1 - SS_res / SS_tot ─── */
+function computeR2(X, Y, B) {
+  const n = X.length, p = Y[0].length
+  // Yhat = X B
+  const Yhat = matMul(X, B)
+
+  let ssRes = 0, ssTot = 0
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < p; j++) {
+      ssRes += (Y[i][j] - Yhat[i][j]) ** 2
+      ssTot += Y[i][j] ** 2 // Y is centered
+    }
   return ssTot > 0 ? 1 - ssRes / ssTot : 0
 }
 
-/* ─── PCA of X (first principal component direction) ─── */
-function computePCA(X) {
+/* ─── Project 6D data onto first 2 PCA components ─── */
+function projectTo2D(X, pcaVecs) {
   const n = X.length
-  // Center
-  let mx = 0, my = 0
-  for (let i = 0; i < n; i++) { mx += X[i][0]; my += X[i][1] }
-  mx /= n; my /= n
-
-  // Covariance matrix
-  let c00 = 0, c01 = 0, c11 = 0
+  const proj = zeros(n, 2)
   for (let i = 0; i < n; i++) {
-    const dx = X[i][0] - mx
-    const dy = X[i][1] - my
-    c00 += dx * dx
-    c01 += dx * dy
-    c11 += dy * dy
+    proj[i][0] = dotVec(X[i], pcaVecs[0])
+    proj[i][1] = dotVec(X[i], pcaVecs[1])
   }
-  c00 /= n; c01 /= n; c11 /= n
-
-  // Eigendecomposition of 2x2 symmetric matrix
-  const trace = c00 + c11
-  const det = c00 * c11 - c01 * c01
-  const disc = Math.sqrt(Math.max(0, trace * trace / 4 - det))
-  const lambda1 = trace / 2 + disc
-  // First eigenvector
-  let v
-  if (Math.abs(c01) > 1e-12) {
-    v = [lambda1 - c11, c01]
-  } else {
-    v = c00 >= c11 ? [1, 0] : [0, 1]
-  }
-  return vecNormalize(v)
+  return proj
 }
 
-/* ─── Reduced-rank regression (rank-1) ─── */
-// RRR: B_rrr = B_ols * V_k * V_k^T where V_k are top-k right singular
-// vectors of B_ols. For scalar Y and 2D X, B_ols is a 2x1 vector.
-// Rank-1 RRR keeps the full OLS direction (since B_ols has rank 1 anyway
-// when Y is 1D). The rank constraint becomes interesting when we think of
-// it as constraining the regression subspace.
-//
-// A more pedagogically useful formulation for this figure:
-// Rank-1 RRR projects X onto a single direction before predicting Y.
-// Full-rank uses both dimensions. We compute the optimal rank-1 direction
-// by SVD of the coefficient matrix of the reduced problem:
-// min ||Y - X * a * b||^2 where a is scalar, b is 2-vector (direction).
-// The solution is: b = direction of OLS beta, which means rank-1 RRR
-// for 1D Y is equivalent to projecting onto beta direction.
-//
-// To make the figure more interesting, we compute rank-k RRR for the
-// multivariate regression: the constrained direction differs from PCA.
-function computeRRR(X, Y, rank) {
-  const beta = computeOLS(X, Y)
-  if (rank >= 2) {
-    // Full rank: use OLS directly
-    return { beta, direction: vecNormalize(beta) }
-  }
-  // Rank 1: project X onto optimal 1D subspace, then regress.
-  // For scalar Y, optimal direction = normalized OLS beta.
-  const dir = vecNormalize(beta)
-  // Project X onto this direction
-  const n = X.length
-  const proj = []
-  for (let i = 0; i < n; i++) {
-    const p = dot(X[i], dir)
-    proj.push(p)
-  }
-  // Regress Y on projected scalar
-  let num = 0, den = 0
-  for (let i = 0; i < n; i++) {
-    num += proj[i] * Y[i]
-    den += proj[i] * proj[i]
-  }
-  const alpha = den > 1e-12 ? num / den : 0
-  // Beta for rank-1 = alpha * dir
-  return { beta: [alpha * dir[0], alpha * dir[1]], direction: dir }
+/* ─── Project a 6D direction onto 2D PCA view ─── */
+function projectDirection(dir, pcaVecs) {
+  const p0 = dotVec(dir, pcaVecs[0])
+  const p1 = dotVec(dir, pcaVecs[1])
+  const n = Math.sqrt(p0 * p0 + p1 * p1)
+  return n > 1e-12 ? [p0 / n, p1 / n] : [1, 0]
 }
 
-/* ─── Colormap: blue (low Y) to red (high Y) ─── */
-function yToColor(y, yMin, yMax) {
-  const range = yMax - yMin || 1
-  const t = (y - yMin) / range // 0..1
-  // Blue (#3B82F6) to Red (#EF4444)
-  const r = Math.round(59 + t * (239 - 59))
-  const g = Math.round(130 + t * (68 - 130))
-  const b = Math.round(246 + t * (68 - 246))
+/* ─── Colormap: blue (low) to red (high) ─── */
+function yToColor(t) {
+  // t in [0, 1]
+  const r0 = 0x3d, g0 = 0x6c, b0 = 0xb9
+  const r1 = 0xc0, g1 = 0x50, b1 = 0x3a
+  const r = Math.round(r0 + t * (r1 - r0))
+  const g = Math.round(g0 + t * (g1 - g0))
+  const b = Math.round(b0 + t * (b1 - b0))
   return `rgb(${r},${g},${b})`
 }
 
@@ -216,106 +403,104 @@ function yToColor(y, yMin, yMax) {
 export default function RRRExplorer() {
   const [rank, setRank] = useState(1)
 
-  const { data, pca, ols, rrr, r2Full, r2RRR, yMin, yMax } = useMemo(() => {
-    const d = generateData()
-    const pcaDir = computePCA(d.X)
-    const olsBeta = computeOLS(d.X, d.Y)
-    const rrrResult = computeRRR(d.X, d.Y, rank)
+  /* ─── Generate data once ─── */
+  const { X, Y, pca, Bfull, r2Full, yColorT } = useMemo(() => {
+    const { X, Y } = generateData()
+    const pca = computePCA(X)
+    const Bfull = computeOLS(X, Y)
+    const r2Full = computeR2(X, Y, Bfull)
 
-    const r2F = computeR2(d.X, d.Y, olsBeta)
-    const r2R = computeR2(d.X, d.Y, rrrResult.beta)
+    // Color by first target dimension for a clear blue-to-red gradient
+    const y1 = Y.map(row => row[0])
+    const yMin = Math.min(...y1)
+    const yMax = Math.max(...y1)
+    const yColorT = y1.map(v => (v - yMin) / (yMax - yMin || 1))
 
-    let mn = Infinity, mx = -Infinity
-    for (let i = 0; i < d.N; i++) {
-      if (d.Y[i] < mn) mn = d.Y[i]
-      if (d.Y[i] > mx) mx = d.Y[i]
-    }
+    return { X, Y, pca, Bfull, r2Full, yColorT }
+  }, [])
 
-    return {
-      data: d,
-      pca: pcaDir,
-      ols: { beta: olsBeta, direction: vecNormalize(olsBeta) },
-      rrr: rrrResult,
-      r2Full: r2F,
-      r2RRR: r2R,
-      yMin: mn,
-      yMax: mx,
-    }
-  }, [rank])
+  /* ─── Rank-dependent computations ─── */
+  const { rrr, r2Rank, proj2D, pcaDir2D, rrrDir2D } = useMemo(() => {
+    const rrr = computeRRR(Bfull, rank)
+    const r2Rank = computeR2(X, Y, rrr.Bk)
 
-  /* ─── Scale data points to SVG coordinates ─── */
+    // Project data to first 2 PCA dimensions for display
+    const pcaVecs = [pca.vectors[0], pca.vectors[1]]
+    const proj2D = projectTo2D(X, pcaVecs)
+
+    // PCA direction in the 2D view is simply [1, 0] by construction
+    const pcaDir2D = [1, 0]
+
+    // RRR rank-1 direction projected into PCA view
+    const rrrDir2D = projectDirection(rrr.direction, pcaVecs)
+
+    return { rrr, r2Rank, proj2D, pcaDir2D, rrrDir2D }
+  }, [rank, X, Y, pca, Bfull])
+
+  /* ─── Scale projected points to SVG coords ─── */
   const scaledPoints = useMemo(() => {
     let maxAbs = 0
-    for (const [x, y] of data.X) {
-      if (Math.abs(x) > maxAbs) maxAbs = Math.abs(x)
-      if (Math.abs(y) > maxAbs) maxAbs = Math.abs(y)
+    for (const p of proj2D) {
+      if (Math.abs(p[0]) > maxAbs) maxAbs = Math.abs(p[0])
+      if (Math.abs(p[1]) > maxAbs) maxAbs = Math.abs(p[1])
     }
     if (maxAbs === 0) maxAbs = 1
-    const s = (PLOT_R * 0.85) / maxAbs
-    return data.X.map(([x, y]) => [
+    const s = (PLOT_R * 0.82) / maxAbs
+    return proj2D.map(([x, y]) => [
       PLOT_CX + x * s,
-      PLOT_CY - y * s, // SVG y-flip
+      PLOT_CY - y * s,
     ])
-  }, [data.X])
+  }, [proj2D])
 
   /* ─── Direction line endpoints ─── */
-  const lineLen = PLOT_R * 0.95
-
-  function directionLine(dir) {
+  const lineLen = PLOT_R * 0.9
+  function dirLine(dir) {
     return {
       x1: PLOT_CX - dir[0] * lineLen,
-      y1: PLOT_CY + dir[1] * lineLen, // y-flip
+      y1: PLOT_CY + dir[1] * lineLen,
       x2: PLOT_CX + dir[0] * lineLen,
       y2: PLOT_CY - dir[1] * lineLen,
     }
   }
 
-  const pcaLine = directionLine(pca)
-  const rrrLine = directionLine(rrr.direction)
-  const olsLine = directionLine(ols.direction)
+  const pcaLine = dirLine(pcaDir2D)
+  const rrrLine = dirLine(rrrDir2D)
 
-  /* ─── Angle between PCA and RRR for annotation ─── */
-  const pcaAngleDeg = Math.atan2(pca[1], pca[0]) * (180 / Math.PI)
-  const rrrAngleDeg =
-    Math.atan2(rrr.direction[1], rrr.direction[0]) * (180 / Math.PI)
-  const angleBetween = Math.abs(pcaAngleDeg - rrrAngleDeg)
-  const displayAngle =
-    angleBetween > 90 ? 180 - angleBetween : angleBetween
-
-  /* ─── Label placement: offset from line endpoints ─── */
-  const pcaLabelPos = {
-    x: PLOT_CX + pca[0] * (lineLen + 14),
-    y: PLOT_CY - pca[1] * (lineLen + 14),
+  /* ─── Label positions ─── */
+  const labelOffset = lineLen + 16
+  const pcaLabel = {
+    x: PLOT_CX + pcaDir2D[0] * labelOffset,
+    y: PLOT_CY - pcaDir2D[1] * labelOffset,
   }
-  const rrrLabelPos = {
-    x: PLOT_CX + rrr.direction[0] * (lineLen + 14),
-    y: PLOT_CY - rrr.direction[1] * (lineLen + 14),
+  const rrrLabel = {
+    x: PLOT_CX + rrrDir2D[0] * labelOffset,
+    y: PLOT_CY - rrrDir2D[1] * labelOffset,
   }
 
-  /* ─── Angle arc between PCA and RRR ─── */
-  const arcRadius = 50
-  const pcaAngleRad = Math.atan2(pca[1], pca[0])
-  const rrrAngleRad = Math.atan2(rrr.direction[1], rrr.direction[0])
+  /* ─── Angle between directions ─── */
+  const pcaAngle = Math.atan2(pcaDir2D[1], pcaDir2D[0])
+  const rrrAngle = Math.atan2(rrrDir2D[1], rrrDir2D[0])
+  let angleDiff = rrrAngle - pcaAngle
+  while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI
+  while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI
+  const displayAngle = Math.abs(angleDiff) * (180 / Math.PI)
+  const displayAngleAdj = displayAngle > 90 ? 180 - displayAngle : displayAngle
 
-  // Determine sweep for smallest arc
-  let startAngle = pcaAngleRad
-  let endAngle = rrrAngleRad
-  let diff = endAngle - startAngle
-  while (diff > Math.PI) diff -= 2 * Math.PI
-  while (diff < -Math.PI) diff += 2 * Math.PI
-  const sweepFlag = diff > 0 ? 0 : 1
+  /* ─── Angle arc ─── */
+  const arcR = 55
+  const sweepFlag = angleDiff > 0 ? 0 : 1
+  const arcX1 = PLOT_CX + Math.cos(pcaAngle) * arcR
+  const arcY1 = PLOT_CY - Math.sin(pcaAngle) * arcR
+  const arcX2 = PLOT_CX + Math.cos(rrrAngle) * arcR
+  const arcY2 = PLOT_CY - Math.sin(rrrAngle) * arcR
+  const arcPath = `M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 0 ${sweepFlag} ${arcX2} ${arcY2}`
+  const midAngle = pcaAngle + angleDiff / 2
+  const arcLabelX = PLOT_CX + Math.cos(midAngle) * (arcR + 14)
+  const arcLabelY = PLOT_CY - Math.sin(midAngle) * (arcR + 14)
 
-  const arcStartX = PLOT_CX + Math.cos(startAngle) * arcRadius
-  const arcStartY = PLOT_CY - Math.sin(startAngle) * arcRadius
-  const arcEndX = PLOT_CX + Math.cos(endAngle) * arcRadius
-  const arcEndY = PLOT_CY - Math.sin(endAngle) * arcRadius
-
-  const arcPath = `M ${arcStartX} ${arcStartY} A ${arcRadius} ${arcRadius} 0 0 ${sweepFlag} ${arcEndX} ${arcEndY}`
-
-  // Midpoint of arc for angle label
-  const midAngle = startAngle + diff / 2
-  const angleLabelX = PLOT_CX + Math.cos(midAngle) * (arcRadius + 14)
-  const angleLabelY = PLOT_CY - Math.sin(midAngle) * (arcRadius + 14)
+  /* ─── R² ratio ─── */
+  const retainPct = r2Full > 0 ? (r2Rank / r2Full) * 100 : 0
+  const barW = 180
 
   return (
     <div>
@@ -323,6 +508,21 @@ export default function RRRExplorer() {
         viewBox={`0 0 ${W} ${H}`}
         style={{ display: "block", width: "100%", height: "auto" }}
       >
+        {/* ── Plot title ── */}
+        <text
+          x={PLOT_CX}
+          y={22}
+          textAnchor="middle"
+          style={{
+            fontFamily: FONT,
+            fontSize: 12,
+            fill: "#333",
+            fontWeight: 600,
+          }}
+        >
+          6D neural activity projected onto first 2 PCs
+        </text>
+
         {/* ── Plot background ── */}
         <circle
           cx={PLOT_CX}
@@ -362,7 +562,7 @@ export default function RRRExplorer() {
             fill: "rgba(0,0,0,0.3)",
           }}
         >
-          x&#x2081;
+          PC1
         </text>
         <text
           x={PLOT_CX + 8}
@@ -374,10 +574,10 @@ export default function RRRExplorer() {
             fill: "rgba(0,0,0,0.3)",
           }}
         >
-          x&#x2082;
+          PC2
         </text>
 
-        {/* ── PCA direction (dashed) ── */}
+        {/* ── PCA direction (dashed gray) ── */}
         <line
           x1={pcaLine.x1}
           y1={pcaLine.y1}
@@ -388,19 +588,7 @@ export default function RRRExplorer() {
           strokeDasharray="6 4"
         />
 
-        {/* ── Full-rank OLS direction (faded gray, only when rank=1) ── */}
-        {rank === 1 && (
-          <line
-            x1={olsLine.x1}
-            y1={olsLine.y1}
-            x2={olsLine.x2}
-            y2={olsLine.y2}
-            stroke={FULL_STROKE}
-            strokeWidth={1.5}
-          />
-        )}
-
-        {/* ── RRR direction (bold teal) ── */}
+        {/* ── RRR direction (solid teal) ── */}
         <line
           x1={rrrLine.x1}
           y1={rrrLine.y1}
@@ -411,8 +599,8 @@ export default function RRRExplorer() {
           style={{ transition: "all 0.2s ease" }}
         />
 
-        {/* ── Angle arc between PCA and RRR ── */}
-        {rank === 1 && displayAngle > 2 && (
+        {/* ── Angle arc ── */}
+        {displayAngleAdj > 2 && (
           <g>
             <path
               d={arcPath}
@@ -421,8 +609,8 @@ export default function RRRExplorer() {
               strokeWidth={1}
             />
             <text
-              x={angleLabelX}
-              y={angleLabelY}
+              x={arcLabelX}
+              y={arcLabelY}
               textAnchor="middle"
               dominantBaseline="central"
               style={{
@@ -431,20 +619,20 @@ export default function RRRExplorer() {
                 fill: "rgba(0,0,0,0.35)",
               }}
             >
-              {displayAngle.toFixed(0)}&#xB0;
+              {displayAngleAdj.toFixed(0)}{"\u00B0"}
             </text>
           </g>
         )}
 
-        {/* ── Data points colored by target Y ── */}
+        {/* ── Data points colored by target ── */}
         {scaledPoints.map(([sx, sy], i) => (
           <circle
             key={i}
             cx={sx}
             cy={sy}
             r={3.5}
-            fill={yToColor(data.Y[i], yMin, yMax)}
-            fillOpacity={0.7}
+            fill={yToColor(yColorT[i])}
+            fillOpacity={0.75}
             stroke="rgba(255,255,255,0.6)"
             strokeWidth={0.5}
           />
@@ -452,8 +640,8 @@ export default function RRRExplorer() {
 
         {/* ── Direction labels ── */}
         <text
-          x={pcaLabelPos.x}
-          y={pcaLabelPos.y}
+          x={pcaLabel.x}
+          y={pcaLabel.y}
           textAnchor="middle"
           dominantBaseline="central"
           style={{
@@ -465,8 +653,8 @@ export default function RRRExplorer() {
           max variance
         </text>
         <text
-          x={rrrLabelPos.x}
-          y={rrrLabelPos.y}
+          x={rrrLabel.x}
+          y={rrrLabel.y}
           textAnchor="middle"
           dominantBaseline="central"
           style={{
@@ -479,57 +667,7 @@ export default function RRRExplorer() {
           max prediction
         </text>
 
-        {/* ── Color legend ── */}
-        <defs>
-          <linearGradient id="rrr-y-gradient" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#3B82F6" />
-            <stop offset="100%" stopColor="#EF4444" />
-          </linearGradient>
-        </defs>
-        <rect
-          x={READOUT_X - 20}
-          y={H - 50}
-          width={120}
-          height={8}
-          rx={4}
-          fill="url(#rrr-y-gradient)"
-        />
-        <text
-          x={READOUT_X - 20}
-          y={H - 56}
-          style={{
-            fontFamily: FONT,
-            fontSize: 9,
-            fill: "rgba(0,0,0,0.4)",
-          }}
-        >
-          target Y
-        </text>
-        <text
-          x={READOUT_X - 20}
-          y={H - 34}
-          style={{
-            fontFamily: FONT,
-            fontSize: 8,
-            fill: "rgba(0,0,0,0.3)",
-          }}
-        >
-          low
-        </text>
-        <text
-          x={READOUT_X + 100}
-          y={H - 34}
-          textAnchor="end"
-          style={{
-            fontFamily: FONT,
-            fontSize: 8,
-            fill: "rgba(0,0,0,0.3)",
-          }}
-        >
-          high
-        </text>
-
-        {/* ── Readout panel ── */}
+        {/* ── Right panel: metrics ── */}
         <text
           x={READOUT_X}
           y={READOUT_Y}
@@ -548,16 +686,12 @@ export default function RRRExplorer() {
         <text
           x={READOUT_X}
           y={READOUT_Y + 30}
-          style={{
-            fontFamily: FONT,
-            fontSize: 10,
-            fill: "rgba(0,0,0,0.4)",
-          }}
+          style={{ fontFamily: FONT, fontSize: 10, fill: "rgba(0,0,0,0.4)" }}
         >
-          Full-rank R&#xB2;
+          Full-rank R{"\u00B2"}
         </text>
         <text
-          x={READOUT_X + 140}
+          x={READOUT_X + barW}
           y={READOUT_Y + 30}
           textAnchor="end"
           style={{
@@ -569,12 +703,11 @@ export default function RRRExplorer() {
         >
           {r2Full.toFixed(3)}
         </text>
-
-        {/* R² bar (full) */}
+        {/* bar bg */}
         <rect
           x={READOUT_X}
           y={READOUT_Y + 36}
-          width={140}
+          width={barW}
           height={4}
           rx={2}
           fill="rgba(0,0,0,0.06)"
@@ -582,7 +715,7 @@ export default function RRRExplorer() {
         <rect
           x={READOUT_X}
           y={READOUT_Y + 36}
-          width={Math.max(0, r2Full * 140)}
+          width={Math.max(0, r2Full * barW)}
           height={4}
           rx={2}
           fill="rgba(0,0,0,0.15)"
@@ -592,16 +725,12 @@ export default function RRRExplorer() {
         <text
           x={READOUT_X}
           y={READOUT_Y + 64}
-          style={{
-            fontFamily: FONT,
-            fontSize: 10,
-            fill: TEAL,
-          }}
+          style={{ fontFamily: FONT, fontSize: 10, fill: TEAL }}
         >
-          Rank-{rank} R&#xB2;
+          Rank-{rank} R{"\u00B2"}
         </text>
         <text
-          x={READOUT_X + 140}
+          x={READOUT_X + barW}
           y={READOUT_Y + 64}
           textAnchor="end"
           style={{
@@ -611,14 +740,12 @@ export default function RRRExplorer() {
             fontWeight: 700,
           }}
         >
-          {r2RRR.toFixed(3)}
+          {r2Rank.toFixed(3)}
         </text>
-
-        {/* R² bar (rank-k) */}
         <rect
           x={READOUT_X}
           y={READOUT_Y + 70}
-          width={140}
+          width={barW}
           height={4}
           rx={2}
           fill="rgba(74,124,111,0.1)"
@@ -626,147 +753,253 @@ export default function RRRExplorer() {
         <rect
           x={READOUT_X}
           y={READOUT_Y + 70}
-          width={Math.max(0, r2RRR * 140)}
+          width={Math.max(0, r2Rank * barW)}
           height={4}
           rx={2}
           fill={TEAL}
           style={{ transition: "width 0.2s ease" }}
         />
 
-        {/* Ratio readout */}
+        {/* Retains % */}
         <text
           x={READOUT_X}
-          y={READOUT_Y + 100}
+          y={READOUT_Y + 98}
           style={{
             fontFamily: FONT,
             fontSize: 9,
             fill: "rgba(0,0,0,0.3)",
           }}
         >
-          {rank === 2
-            ? "rank 2 = full rank (2D input)"
-            : r2Full > 0
-              ? `retains ${((r2RRR / r2Full) * 100).toFixed(0)}% of full R\u00B2`
-              : ""}
+          {rank >= D
+            ? "rank 6 = full rank (6D input)"
+            : `retains ${retainPct.toFixed(0)}% of full R\u00B2`}
         </text>
 
-        {/* ── Key insight annotation ── */}
-        {rank === 1 && (
-          <g>
-            <text
-              x={READOUT_X}
-              y={READOUT_Y + 150}
-              style={{
-                fontFamily: FONT,
-                fontSize: 10,
-                fill: "rgba(0,0,0,0.45)",
-                fontWeight: 600,
-              }}
-            >
-              Key insight
-            </text>
-            <text
-              x={READOUT_X}
-              y={READOUT_Y + 168}
-              style={{
-                fontFamily: FONT,
-                fontSize: 9,
-                fill: "rgba(0,0,0,0.35)",
-              }}
-            >
-              PCA finds the direction of
-            </text>
-            <text
-              x={READOUT_X}
-              y={READOUT_Y + 182}
-              style={{
-                fontFamily: FONT,
-                fontSize: 9,
-                fill: "rgba(0,0,0,0.35)",
-              }}
-            >
-              maximum variance in X.
-            </text>
-            <text
-              x={READOUT_X}
-              y={READOUT_Y + 200}
-              style={{
-                fontFamily: FONT,
-                fontSize: 9,
-                fill: TEAL,
-              }}
-            >
-              RRR finds the direction that
-            </text>
-            <text
-              x={READOUT_X}
-              y={READOUT_Y + 214}
-              style={{
-                fontFamily: FONT,
-                fontSize: 9,
-                fill: TEAL,
-              }}
-            >
-              best predicts Y — these are
-            </text>
-            <text
-              x={READOUT_X}
-              y={READOUT_Y + 228}
-              style={{
-                fontFamily: FONT,
-                fontSize: 9,
-                fill: TEAL,
-                fontWeight: 600,
-              }}
-            >
-              not the same.
-            </text>
-          </g>
-        )}
-
-        {/* ── Plot title ── */}
+        {/* ── Key insight text ── */}
         <text
-          x={PLOT_CX}
-          y={24}
-          textAnchor="middle"
+          x={READOUT_X}
+          y={READOUT_Y + 140}
           style={{
             fontFamily: FONT,
-            fontSize: 12,
-            fill: "#333",
+            fontSize: 10,
+            fill: "rgba(0,0,0,0.45)",
             fontWeight: 600,
           }}
         >
-          Neural activity (X) colored by target (Y)
+          Key insight
+        </text>
+        <text
+          x={READOUT_X}
+          y={READOUT_Y + 158}
+          style={{
+            fontFamily: FONT,
+            fontSize: 9,
+            fill: "rgba(0,0,0,0.35)",
+          }}
+        >
+          The dashed line marks
+        </text>
+        <text
+          x={READOUT_X}
+          y={READOUT_Y + 172}
+          style={{
+            fontFamily: FONT,
+            fontSize: 9,
+            fill: "rgba(0,0,0,0.35)",
+          }}
+        >
+          maximum variance in X (PCA).
+        </text>
+        <text
+          x={READOUT_X}
+          y={READOUT_Y + 192}
+          style={{
+            fontFamily: FONT,
+            fontSize: 9,
+            fill: TEAL,
+          }}
+        >
+          The teal line marks the
+        </text>
+        <text
+          x={READOUT_X}
+          y={READOUT_Y + 206}
+          style={{
+            fontFamily: FONT,
+            fontSize: 9,
+            fill: TEAL,
+          }}
+        >
+          direction that best predicts Y.
+        </text>
+        <text
+          x={READOUT_X}
+          y={READOUT_Y + 224}
+          style={{
+            fontFamily: FONT,
+            fontSize: 9,
+            fill: TEAL,
+            fontWeight: 600,
+          }}
+        >
+          In 6D these diverge{"\u2014"}most
+        </text>
+        <text
+          x={READOUT_X}
+          y={READOUT_Y + 238}
+          style={{
+            fontFamily: FONT,
+            fontSize: 9,
+            fill: TEAL,
+            fontWeight: 600,
+          }}
+        >
+          variance doesn{"'"}t predict.
+        </text>
+
+        {/* ── Singular value spectrum ── */}
+        <text
+          x={READOUT_X}
+          y={READOUT_Y + 272}
+          style={{
+            fontFamily: FONT,
+            fontSize: 10,
+            fill: "rgba(0,0,0,0.45)",
+            fontWeight: 600,
+          }}
+        >
+          Singular values of B
+        </text>
+        {rrr.S.slice(0, Math.min(DY, D)).map((s, i) => {
+          const maxS = Math.max(...rrr.S.slice(0, DY))
+          const bw = maxS > 0 ? (s / maxS) * (barW * 0.6) : 0
+          const yPos = READOUT_Y + 290 + i * 18
+          return (
+            <g key={i}>
+              <text
+                x={READOUT_X}
+                y={yPos}
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 9,
+                  fill: i < rank ? TEAL : "rgba(0,0,0,0.2)",
+                }}
+              >
+                {"\u03C3"}{i + 1}
+              </text>
+              <rect
+                x={READOUT_X + 22}
+                y={yPos - 7}
+                width={barW * 0.6}
+                height={8}
+                rx={2}
+                fill="rgba(0,0,0,0.04)"
+              />
+              <rect
+                x={READOUT_X + 22}
+                y={yPos - 7}
+                width={bw}
+                height={8}
+                rx={2}
+                fill={i < rank ? TEAL : "rgba(0,0,0,0.1)"}
+                style={{ transition: "fill 0.2s ease" }}
+              />
+              <text
+                x={READOUT_X + 22 + barW * 0.6 + 6}
+                y={yPos}
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 8,
+                  fill: i < rank ? TEAL : "rgba(0,0,0,0.2)",
+                }}
+              >
+                {s.toFixed(2)}
+              </text>
+            </g>
+          )
+        })}
+
+        {/* ── Color legend ── */}
+        <defs>
+          <linearGradient id="rrr-y-gradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={BLUE_LO} />
+            <stop offset="100%" stopColor={RED_HI} />
+          </linearGradient>
+        </defs>
+        <rect
+          x={READOUT_X}
+          y={H - 50}
+          width={120}
+          height={8}
+          rx={4}
+          fill="url(#rrr-y-gradient)"
+        />
+        <text
+          x={READOUT_X}
+          y={H - 56}
+          style={{
+            fontFamily: FONT,
+            fontSize: 9,
+            fill: "rgba(0,0,0,0.4)",
+          }}
+        >
+          target Y
+        </text>
+        <text
+          x={READOUT_X}
+          y={H - 34}
+          style={{
+            fontFamily: FONT,
+            fontSize: 8,
+            fill: "rgba(0,0,0,0.3)",
+          }}
+        >
+          low
+        </text>
+        <text
+          x={READOUT_X + 120}
+          y={H - 34}
+          textAnchor="end"
+          style={{
+            fontFamily: FONT,
+            fontSize: 8,
+            fill: "rgba(0,0,0,0.3)",
+          }}
+        >
+          high
         </text>
       </svg>
 
       {/* ── Slider control ── */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          marginTop: 4,
-          fontFamily: FONT,
-          fontSize: 12,
-          color: "#666",
-        }}
-      >
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="blog-figure__controls">
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontFamily: FONT,
+            fontSize: 12,
+            color: "#666",
+          }}
+        >
           Rank constraint k ={" "}
           <strong style={{ color: TEAL, minWidth: 12 }}>{rank}</strong>
           <input
             type="range"
             min={1}
-            max={2}
+            max={D}
             step={1}
             value={rank}
             onChange={e => setRank(Number(e.target.value))}
             className="dim-explorer__range"
-            style={{ width: 120 }}
+            style={{ width: 160 }}
           />
           <span style={{ color: "rgba(0,0,0,0.3)", fontSize: 10 }}>
-            {rank === 1 ? "(rank-constrained)" : "(full rank)"}
+            {rank === 1
+              ? "(rank-1 constrained)"
+              : rank >= D
+                ? "(full rank)"
+                : `(rank-${rank} constrained)`}
           </span>
         </label>
       </div>

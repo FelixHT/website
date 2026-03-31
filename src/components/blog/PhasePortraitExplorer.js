@@ -2,18 +2,16 @@ import React, { useState, useMemo } from "react"
 
 /* ─── Layout ─── */
 const W = 700
-const H = 380
+const H = 400
 const FONT = "var(--font-mono, monospace)"
 
 /* Left panel: phase portrait */
 const LP_X = 40
-const LP_Y = 20
+const LP_Y = 30
 const LP_W = 420
 const LP_H = 340
 const LP_CX = LP_X + LP_W / 2
 const LP_CY = LP_Y + LP_H / 2
-const LP_RANGE = 2
-const LP_PX_PER_UNIT = LP_W / (2 * LP_RANGE) // range -2..2 => 4 units across LP_W
 
 /* Right panel: eigenvalue plane */
 const RP_X = 480
@@ -129,63 +127,64 @@ function timeColor(t) {
 export default function PhasePortraitExplorer() {
   const [preset, setPreset] = useState(PRESETS[0])
 
-  const clippedSegments = useMemo(() => {
+  /* ─── Trajectory, range, grid — all derived together ─── */
+  const phaseData = useMemo(() => {
+    // Compute trajectory
     const N = 80
     const pts = [[1, 0.3]]
     for (let i = 0; i < N; i++) {
-      pts.push(matVec(preset.A, pts[pts.length - 1]))
+      const next = matVec(preset.A, pts[pts.length - 1])
+      // Stop if trajectory has blown up too far
+      if (Math.abs(next[0]) > 100 || Math.abs(next[1]) > 100) break
+      pts.push(next)
     }
 
-    // Clip segments to LP range and build colored segments
+    // Compute range from trajectory extent
+    let maxExtent = 1.5
+    for (const [x, y] of pts) {
+      maxExtent = Math.max(maxExtent, Math.abs(x), Math.abs(y))
+    }
+    const range = Math.ceil(maxExtent * 1.2) // pad by 20%, round up to integer
+    const pxPerUnit = LP_W / (2 * range)
+
+    // Build colored segments (no clipping needed — range already fits trajectory)
     const segs = []
     for (let i = 0; i < pts.length - 1; i++) {
       const [x0, y0] = pts[i]
       const [x1, y1] = pts[i + 1]
-      // Skip segment if both points completely outside (simple rejection)
-      if (
-        (x0 < -LP_RANGE && x1 < -LP_RANGE) ||
-        (x0 > LP_RANGE && x1 > LP_RANGE) ||
-        (y0 < -LP_RANGE && y1 < -LP_RANGE) ||
-        (y0 > LP_RANGE && y1 > LP_RANGE)
-      ) {
-        continue
-      }
-      // Clamp endpoints to range for drawing
-      const cx0 = Math.max(-LP_RANGE, Math.min(LP_RANGE, x0))
-      const cy0 = Math.max(-LP_RANGE, Math.min(LP_RANGE, y0))
-      const cx1 = Math.max(-LP_RANGE, Math.min(LP_RANGE, x1))
-      const cy1 = Math.max(-LP_RANGE, Math.min(LP_RANGE, y1))
-      const t = i / (N - 1)
+      const t = i / (pts.length - 2)
       segs.push({
-        x0: LP_CX + cx0 * LP_PX_PER_UNIT,
-        y0: LP_CY - cy0 * LP_PX_PER_UNIT,
-        x1: LP_CX + cx1 * LP_PX_PER_UNIT,
-        y1: LP_CY - cy1 * LP_PX_PER_UNIT,
+        x0: LP_CX + x0 * pxPerUnit,
+        y0: LP_CY - y0 * pxPerUnit,
+        x1: LP_CX + x1 * pxPerUnit,
+        y1: LP_CY - y1 * pxPerUnit,
         color: timeColor(t),
       })
     }
 
-    return segs
-  }, [preset])
-
-  // Start point SVG coords
-  const startSx = LP_CX + Math.max(-LP_RANGE, Math.min(LP_RANGE, 1)) * LP_PX_PER_UNIT
-  const startSy = LP_CY - Math.max(-LP_RANGE, Math.min(LP_RANGE, 0.3)) * LP_PX_PER_UNIT
-
-  /* ─── Grid lines for left panel ─── */
-  const lpGridLines = useMemo(() => {
-    const lines = []
-    for (let v = -LP_RANGE; v <= LP_RANGE; v++) {
+    // Grid lines: one per integer unit, skipping 0
+    const gridLines = []
+    for (let v = -(range - 1); v <= range - 1; v++) {
       if (v === 0) continue
-      // Vertical
-      const sx = LP_CX + v * LP_PX_PER_UNIT
-      lines.push({ x1: sx, y1: LP_Y, x2: sx, y2: LP_Y + LP_H })
-      // Horizontal
-      const sy = LP_CY - v * LP_PX_PER_UNIT
-      lines.push({ x1: LP_X, y1: sy, x2: LP_X + LP_W, y2: sy })
+      const sx = LP_CX + v * pxPerUnit
+      gridLines.push({ x1: sx, y1: LP_Y, x2: sx, y2: LP_Y + LP_H })
+      const sy = LP_CY - v * pxPerUnit
+      gridLines.push({ x1: LP_X, y1: sy, x2: LP_X + LP_W, y2: sy })
     }
-    return lines
-  }, [])
+
+    // Tick values: every integer from -(range-1) to (range-1), skipping 0
+    const ticks = []
+    for (let v = -(range - 1); v <= range - 1; v++) {
+      if (v === 0) continue
+      ticks.push(v)
+    }
+
+    // Start point in SVG coords
+    const startSx = LP_CX + 1 * pxPerUnit
+    const startSy = LP_CY - 0.3 * pxPerUnit
+
+    return { segs, range, pxPerUnit, gridLines, ticks, startSx, startSy }
+  }, [preset])
 
   /* ─── Grid lines for right panel ─── */
   const rpGridLines = useMemo(() => {
@@ -207,18 +206,35 @@ export default function PhasePortraitExplorer() {
       const sx = RP_CX + e.re * RP_PX_PER_UNIT
       const sy = RP_CY - e.im * RP_PX_PER_UNIT
       const inside = mag < 1
+      // Offset label to avoid overlap with axis labels
+      // If re > 1.0, place label to the left of the dot
+      const labelDx = e.re > 1.0 ? -8 : 8
+      const labelAnchor = e.re > 1.0 ? "end" : "start"
+      // Vertical: above for positive im, below for negative, above for real
+      // Extra vertical offset when imaginary part is near ±1i (close to "1i" tick label)
+      let labelDy = e.im > 0 ? -10 : e.im < 0 ? 16 : -10
+      // If near the Im axis tick labels (|im| close to 1), shift further
+      if (Math.abs(Math.abs(e.im) - 1) < 0.15) {
+        labelDy = e.im > 0 ? -14 : 20
+      }
       return {
         sx,
         sy,
         color: inside ? TEAL : RED,
         label: formatEig(e),
         im: e.im,
+        re: e.re,
+        labelDx,
+        labelAnchor,
+        labelDy,
       }
     })
   }, [preset])
 
   /* ─── Unit circle path ─── */
   const unitCircleR = 1 * RP_PX_PER_UNIT
+
+  const { segs, gridLines, ticks, startSx, startSy } = phaseData
 
   return (
     <figure className="blog-figure" style={{ maxWidth: W, margin: "1.5rem auto" }}>
@@ -251,7 +267,7 @@ export default function PhasePortraitExplorer() {
         />
 
         {/* Grid lines */}
-        {lpGridLines.map((l, i) => (
+        {gridLines.map((l, i) => (
           <line
             key={i}
             x1={l.x1}
@@ -302,10 +318,10 @@ export default function PhasePortraitExplorer() {
         </text>
 
         {/* Axis tick labels */}
-        {[-2, -1, 1, 2].map((v) => (
+        {ticks.map((v) => (
           <React.Fragment key={`lp-tick-${v}`}>
             <text
-              x={LP_CX + v * LP_PX_PER_UNIT}
+              x={LP_CX + v * phaseData.pxPerUnit}
               y={LP_CY + 14}
               textAnchor="middle"
               fill="#aaa"
@@ -315,7 +331,7 @@ export default function PhasePortraitExplorer() {
             </text>
             <text
               x={LP_CX - 8}
-              y={LP_CY - v * LP_PX_PER_UNIT + 3}
+              y={LP_CY - v * phaseData.pxPerUnit + 3}
               textAnchor="end"
               fill="#aaa"
               fontSize="9"
@@ -327,7 +343,7 @@ export default function PhasePortraitExplorer() {
 
         {/* Trajectory segments */}
         <g clipPath="url(#pp-clip-left)">
-          {clippedSegments.map((seg, i) => (
+          {segs.map((seg, i) => (
             <line
               key={i}
               x1={seg.x0}
@@ -356,7 +372,7 @@ export default function PhasePortraitExplorer() {
         {/* Panel title */}
         <text
           x={LP_CX}
-          y={LP_Y - 4}
+          y={LP_Y - 8}
           textAnchor="middle"
           fill="#555"
           fontSize="12"
@@ -465,25 +481,21 @@ export default function PhasePortraitExplorer() {
         ))}
 
         {/* Eigenvalue dots and labels */}
-        {eigData.map((e, i) => {
-          // Place label to avoid overlap: above for positive im, below for negative, right for real
-          const labelDy = e.im > 0 ? -10 : e.im < 0 ? 16 : -10
-          const labelDx = 8
-          return (
-            <React.Fragment key={i}>
-              <circle cx={e.sx} cy={e.sy} r={5} fill={e.color} />
-              <text
-                x={e.sx + labelDx}
-                y={e.sy + labelDy}
-                fill={e.color}
-                fontSize="9"
-                fontWeight="600"
-              >
-                {e.label}
-              </text>
-            </React.Fragment>
-          )
-        })}
+        {eigData.map((e, i) => (
+          <React.Fragment key={i}>
+            <circle cx={e.sx} cy={e.sy} r={5} fill={e.color} />
+            <text
+              x={e.sx + e.labelDx}
+              y={e.sy + e.labelDy}
+              textAnchor={e.labelAnchor}
+              fill={e.color}
+              fontSize="9"
+              fontWeight="600"
+            >
+              {e.label}
+            </text>
+          </React.Fragment>
+        ))}
 
         {/* Panel title */}
         <text

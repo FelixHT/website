@@ -45,7 +45,7 @@ function gaussianPair(rand) {
 
 /* ─── Generate latent trajectory ─── */
 function generateLatent(T) {
-  const A = [[0.98, -0.2], [0.2, 0.98]]
+  const A = [[0.95, -0.2], [0.2, 0.95]]
   const xs = new Array(T)
   xs[0] = [1, 0]
   for (let t = 1; t < T; t++) {
@@ -198,31 +198,35 @@ export default function ObservationMixingExplorer() {
   const latentOverlay = useMemo(() => {
     if (!showLatent) return null
 
-    // find global y range of right panel
-    const panelTop = PANEL_Y
-    const panelBot = PANEL_Y + PANEL_H
-
-    // scale x1 and x2 to fit the full right panel height
     const x1vals = latent.map(x => x[0])
     const x2vals = latent.map(x => x[1])
 
-    function scaleSignal(vals) {
-      const mn = Math.min(...vals)
-      const mx = Math.max(...vals)
-      const range = mx - mn || 1
-      const pad = range * 0.08
-      return vals.map((v, t) => {
-        const sx = RIGHT_X + (t / (T - 1)) * RIGHT_W
-        const sy = panelBot - ((v - (mn - pad)) / (range + 2 * pad)) * (panelBot - panelTop)
-        return [sx, sy]
-      })
-    }
+    const latentMax = Math.max(
+      Math.max(...x1vals.map(Math.abs)),
+      Math.max(...x2vals.map(Math.abs)),
+    ) || 1
 
-    return {
-      x1pts: scaleSignal(x1vals),
-      x2pts: scaleSignal(x2vals),
-    }
-  }, [latent, showLatent])
+    // for each trace, scale the latent signals to fit within that trace's y-range
+    const perTrace = rightPlot.traces.map((trace) => {
+      const { y0, y1 } = trace
+
+      function scalePts(vals) {
+        return vals.map((v, t) => {
+          const sx = RIGHT_X + (t / (T - 1)) * RIGHT_W
+          // map v in [-latentMax, latentMax] → SVG [y1, y0] (bottom to top)
+          const sy = y1 - ((v + latentMax) / (2 * latentMax)) * (y1 - y0)
+          return [sx, sy]
+        })
+      }
+
+      return {
+        x1pts: scalePts(x1vals),
+        x2pts: scalePts(x2vals),
+      }
+    })
+
+    return { perTrace }
+  }, [latent, showLatent, rightPlot])
 
   return (
     <figure className="blog-figure">
@@ -348,27 +352,29 @@ export default function ObservationMixingExplorer() {
             </g>
           ))}
 
-          {/* latent overlay */}
-          {latentOverlay && (
-            <>
+          {/* latent overlay — one pair of lines per trace, scaled to that trace's y-range */}
+          {latentOverlay && latentOverlay.perTrace.map((ov, i) => (
+            <g key={`lov${i}`}>
               <polyline
-                points={pointsStr(latentOverlay.x1pts)}
+                points={pointsStr(ov.x1pts)}
                 fill="none"
                 stroke={BLUE}
-                strokeWidth={2}
+                strokeWidth={1.5}
                 strokeDasharray="4 3"
                 strokeLinejoin="round"
+                opacity={0.7}
               />
               <polyline
-                points={pointsStr(latentOverlay.x2pts)}
+                points={pointsStr(ov.x2pts)}
                 fill="none"
                 stroke={RED}
-                strokeWidth={2}
+                strokeWidth={1.5}
                 strokeDasharray="4 3"
                 strokeLinejoin="round"
+                opacity={0.7}
               />
-            </>
-          )}
+            </g>
+          ))}
         </g>
 
         <clipPath id="rightClip">
