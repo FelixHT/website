@@ -260,6 +260,7 @@ const IndexPage = () => {
                 { title: "Canonical correlation analysis", author: "Finding shared structure between two high-dimensional datasets.", link: "/blog/cca/", part: 9 },
                 { title: "Procrustes and hyperalignment", author: "Aligning neural representations across subjects.", link: "/blog/procrustes-alignment/", part: 10 },
                 { title: "Reduced-rank regression and dPCA", author: "Predicting one population's activity from another through a low-rank bottleneck.", link: "/blog/rrr-dpca/", part: 11 },
+                { title: "Linear dynamical systems and latent state", author: "Why neural trajectories are not just clouds of points.", link: "/blog/linear-dynamical-systems/", part: 12 },
               ].map((entry) => (
                 <ArticleCard
                   key={entry.part}

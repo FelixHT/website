@@ -14,6 +14,7 @@ const SERIES = [
   { part: 9, title: "Canonical correlation analysis", path: "/blog/cca/" },
   { part: 10, title: "Procrustes and hyperalignment", path: "/blog/procrustes-alignment/" },
   { part: 11, title: "Reduced-rank regression and dPCA", path: "/blog/rrr-dpca/" },
+  { part: 12, title: "Linear dynamical systems and latent state", path: "/blog/linear-dynamical-systems/" },
 ]
 
 export default function SeriesNav({ part }) {
