@@ -56,10 +56,10 @@ const PRESETS = [
   },
   {
     label: "unstable node",
-    A: rotatedDiag(1.04, 1.08),
+    A: rotatedDiag(1.005, 1.008),
     eigs: [
-      { re: 1.04, im: 0 },
-      { re: 1.08, im: 0 },
+      { re: 1.005, im: 0 },
+      { re: 1.008, im: 0 },
     ],
   },
   {
@@ -87,12 +87,12 @@ const PRESETS = [
   {
     label: "unstable spiral",
     A: [
-      [1.01, -0.2],
-      [0.2, 1.01],
+      [0.987, -0.2],
+      [0.2, 0.987],
     ],
     eigs: [
-      { re: 1.01, im: 0.2 },
-      { re: 1.01, im: -0.2 },
+      { re: 0.987, im: 0.2 },
+      { re: 0.987, im: -0.2 },
     ],
   },
 ]
@@ -129,23 +129,16 @@ export default function PhasePortraitExplorer() {
 
   /* ─── Trajectory, range, grid — all derived together ─── */
   const phaseData = useMemo(() => {
-    // Compute trajectory
+    // Fixed range — presets are tuned so trajectories stay visible
+    const range = 2
+    const pxPerUnit = LP_W / (2 * range)
     const N = 80
     const pts = [[1, 0.3]]
     for (let i = 0; i < N; i++) {
       const next = matVec(preset.A, pts[pts.length - 1])
-      // Stop if trajectory has blown up too far
-      if (Math.abs(next[0]) > 100 || Math.abs(next[1]) > 100) break
+      if (Math.abs(next[0]) > range * 1.5 || Math.abs(next[1]) > range * 1.5) break
       pts.push(next)
     }
-
-    // Compute range from trajectory extent
-    let maxExtent = 1.5
-    for (const [x, y] of pts) {
-      maxExtent = Math.max(maxExtent, Math.abs(x), Math.abs(y))
-    }
-    const range = Math.ceil(maxExtent * 1.2) // pad by 20%, round up to integer
-    const pxPerUnit = LP_W / (2 * range)
 
     // Build colored segments (no clipping needed — range already fits trajectory)
     const segs = []
